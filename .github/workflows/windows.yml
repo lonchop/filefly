@@ -8,6 +8,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -31,8 +34,56 @@ jobs:
 
       - run: flutter build windows --release
 
-      - uses: actions/upload-artifact@v4
+      # A tag ships as its own version; anything else is a dev build.
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "value=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=0.0.0-dev+${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Not preinstalled on the windows-2025 image, unlike windows-2022.
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        run: >
+          iscc /DAppVersion=${{ steps.version.outputs.value }}
+          windows\installer\filefly.iss
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
         with:
-          name: filefly-windows-x64
+          name: filefly-windows-x64-setup
+          path: build/installer/*.exe
+          if-no-files-found: error
+
+      # The unpacked build, for running FileFly without installing it.
+      - name: Upload portable build
+        uses: actions/upload-artifact@v4
+        with:
+          name: filefly-windows-x64-portable
           path: build/windows/x64/runner/Release/
           if-no-files-found: error
+
+      # Compress-Archive ships with Windows; 7-Zip is no longer on the image.
+      - name: Package portable build
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: >
+          Compress-Archive
+          -Path build\windows\x64\runner\Release\*
+          -DestinationPath build\installer\FileFly-${{ steps.version.outputs.value }}-windows-x64-portable.zip
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF#refs/tags/}" \
+            --title "FileFly ${{ steps.version.outputs.value }}" \
+            --generate-notes \
+            build/installer/*
