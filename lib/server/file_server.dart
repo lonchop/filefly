@@ -34,13 +34,23 @@ class SharedFile {
 /// The HTTP server the phone talks to. The desktop window is a native client
 /// of the same shared folder, so nothing on screen goes through this.
 class FileServer {
-  FileServer({required this.indexHtml, required this.token, required Directory sharedDirectory})
-      : _sharedDirectory = sharedDirectory;
+  FileServer({
+    required this.indexHtml,
+    required this.token,
+    required Directory sharedDirectory,
+    this.publicAssets = const {},
+  }) : _sharedDirectory = sharedDirectory;
 
   /// The page served to phones. Held as a string so this layer stays free of
   /// Flutter asset plumbing.
   final String indexHtml;
   final String token;
+
+  /// Files served without a token, keyed by request path: the logo and the web
+  /// manifest. They carry no user data, and the browser fetches them outside
+  /// the page's cookie context when installing a home-screen shortcut — gating
+  /// them would only produce a blank icon.
+  final Map<String, ({String contentType, List<int> bytes})> publicAssets;
 
   Directory _sharedDirectory;
   HttpServer? _server;
@@ -111,6 +121,12 @@ class FileServer {
   Future<void> _handle(HttpRequest request) async {
     final path = request.uri.path;
     final query = request.uri.queryParameters;
+
+    final asset = publicAssets[path];
+    if (request.method == 'GET' && asset != null) {
+      await _sendBytes(request, asset.bytes, asset.contentType);
+      return;
+    }
 
     if (request.method == 'GET' && path == '/') {
       if (_tokenInQueryIsValid(query)) {
@@ -308,6 +324,17 @@ class FileServer {
       ..headers.set(HttpHeaders.cacheControlHeader, 'no-store')
       ..contentLength = body.length
       ..add(body);
+    await request.response.close();
+  }
+
+  /// Branding that never changes while the app runs, so it may be cached.
+  Future<void> _sendBytes(HttpRequest request, List<int> bytes, String contentType) async {
+    request.response
+      ..statusCode = HttpStatus.ok
+      ..headers.set(HttpHeaders.contentTypeHeader, contentType)
+      ..headers.set(HttpHeaders.cacheControlHeader, 'public, max-age=86400')
+      ..contentLength = bytes.length
+      ..add(bytes);
     await request.response.close();
   }
 

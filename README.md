@@ -84,7 +84,11 @@ tool/uninstall_linux.sh
 
 ## Security
 
-- Every request needs the access token; without it the answer is `401`.
+- Every request needs the access token; without it the answer is `401`. The
+  three exceptions are `/manifest.webmanifest`, `/icon-256.png` and
+  `/icon-512.png`: static branding with no user data, served openly because the
+  browser fetches them outside the page's cookie context when a phone adds
+  FileFly to its home screen, and gating them only yields a blank icon.
 - The token lives in the platform config directory (`~/.config/filefly/token`
   on Linux, `%APPDATA%\filefly\token` on Windows), mode `600`, and is reused
   across restarts. Regenerating it per run would invalidate the QR, the saved
