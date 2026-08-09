@@ -38,6 +38,8 @@ dependencies:
   file_selector: ^1.0.3
   desktop_drop: ^0.7.1
   path: ^1.9.1
+  window_manager: ^0.5.2
+  tray_manager: ^0.5.3
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +71,10 @@ flutter:
     - assets/icons/filefly-128.png
     - assets/icons/filefly-256.png
     - assets/icons/filefly-512.png
+    # El ícono de la bandeja del sistema: Windows exige .ico, Linux escala el
+    # PNG chico mejor que el de 128.
+    - assets/icons/filefly-32.png
+    - assets/icons/filefly.ico
 
   # Van empaquetadas para que la ventana se vea igual en todas las máquinas y
   # para que no haya que descargar nada en tiempo de ejecución: esta app nunca

@@ -2,13 +2,17 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'app/palette.dart';
 import 'app/theme.dart';
+import 'app/tray_lifecycle.dart';
 import 'ui/home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
+  await TrayLifecycle().start();
 
   // La página que cargan los celulares. Se lee una sola vez aquí para que la
   // capa del servidor nunca toque el asset bundle de Flutter, y se le estampa
