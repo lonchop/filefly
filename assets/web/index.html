@@ -110,6 +110,7 @@
     }
     /* Flat dot. Status is read from the label next to it, not from a glow. */
     .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+    .badge[data-offline] .dot{background:var(--danger)}
 
     /* Explicit placement, because the DOM order is the phone order (send,
        files, connect) and auto-placement would leave column 2 empty. */
@@ -293,7 +294,7 @@
       <p class="muted lede">Archivos entre la PC y el celular. Sin cable ni apps.</p>
     </div>
     <div class="headEnd">
-      <p class="badge"><span class="dot" aria-hidden="true"></span>Conectado</p>
+      <p class="badge" id="conn" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="connText">Conectado</span></p>
       <button id="installBtn" class="secondary" type="button" hidden>Instalar app</button>
     </div>
   </header>
@@ -1680,6 +1681,8 @@ module.exports = QRCode;
     copy: $("#copyBtn"),
     install: $("#installBtn"),
     installHint: $("#installHint"),
+    conn: $("#conn"),
+    connText: $("#connText"),
     status: $("#status"),
     box: $("#progressBox"),
     bar: $("#progressBar"),
@@ -1693,6 +1696,27 @@ module.exports = QRCode;
     const sep = path.includes("?") ? "&" : "?";
     return path + sep + "token=" + encodeURIComponent(token);
   };
+
+  // El insignia decía "Conectado" desde que se pintaba la página y no volvía a
+  // mirar. Si FileFly se cierra en la PC, la pestaña abierta seguía afirmando
+  // que había conexión mientras todo lo demás fallaba.
+  function setConnected(ok){
+    els.conn.toggleAttribute("data-offline", !ok);
+    els.connText.textContent = ok ? "Conectado" : "Sin conexión";
+  }
+
+  // Un solo punto por el que pasan todas las peticiones: el estado de la
+  // insignia se deduce de si el servidor respondió, no de cada llamada.
+  async function apiFetch(path, init){
+    try{
+      const r = await fetch(api(path), init);
+      setConnected(true);
+      return r;
+    }catch(err){
+      setConnected(false);
+      throw err;
+    }
+  }
 
   function formatBytes(bytes){
     if (!bytes) return "0 B";
@@ -1713,7 +1737,7 @@ module.exports = QRCode;
   }
 
   async function loadConfig(){
-    const r = await fetch(api("/api/config"));
+    const r = await apiFetch("/api/config");
     if (!r.ok) throw new Error("No autorizado.");
     const cfg = await r.json();
     shareUrls = cfg.urls || [];
@@ -1745,7 +1769,7 @@ module.exports = QRCode;
   async function loadFiles(){
     let r;
     try{
-      r = await fetch(api("/api/files"));
+      r = await apiFetch("/api/files");
     }catch{
       els.files.setAttribute("aria-busy", "false");
       els.files.innerHTML = '<div class="empty">Sin conexión con la PC. Revisa que ambos sigan en la misma red Wi‑Fi.</div>';
@@ -1818,7 +1842,7 @@ module.exports = QRCode;
 
         del.disabled = true;
         try{
-          const res = await fetch(api("/api/file?name=" + encodeURIComponent(f.name)), {method:"DELETE"});
+          const res = await apiFetch("/api/file?name=" + encodeURIComponent(f.name), {method:"DELETE"});
           if (!res.ok) throw new Error();
           setStatus("Se eliminó " + f.name, "ok");
           await loadFiles();
@@ -1851,6 +1875,7 @@ module.exports = QRCode;
       };
 
       xhr.onload = () => {
+        setConnected(true);
         if (xhr.status >= 200 && xhr.status < 300){
           setProgress(100);
           resolve();
@@ -1859,7 +1884,10 @@ module.exports = QRCode;
         }
       };
 
-      xhr.onerror = () => reject(new Error("Sin conexión con la PC. Revisa el Wi‑Fi."));
+      xhr.onerror = () => {
+        setConnected(false);
+        reject(new Error("Sin conexión con la PC. Revisa el Wi‑Fi."));
+      };
       xhr.send(file);
     });
   }
@@ -1899,6 +1927,13 @@ module.exports = QRCode;
 
   els.drop.addEventListener("drop", e => upload(e.dataTransfer.files));
   els.refresh.addEventListener("click", loadFiles);
+
+  // Volver a la pestaña es el momento en que el estado mostrado tiene más
+  // probabilidad de estar viejo: el celular estuvo minutos bloqueado y la PC
+  // pudo apagarse. Es una comprobación por regreso, no un sondeo.
+  addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") loadFiles();
+  });
 
   els.copy.addEventListener("click", async () => {
     const url = shareUrls[0];
@@ -1972,7 +2007,12 @@ module.exports = QRCode;
 
   loadConfig().catch(err => {
     console.error("config:", err);
-    els.qrLabel.textContent = "Sesión no válida. Vuelve a escanear el código desde la PC.";
+    // Un fallo de red y un token caducado piden cosas distintas al usuario, y
+    // mandarlo a reescanear cuando la PC está apagada no lo lleva a ninguna
+    // parte. Solo la respuesta del servidor lleva mensaje propio.
+    els.qrLabel.textContent = err.message === "No autorizado."
+      ? "Sesión no válida. Vuelve a escanear el código desde la PC."
+      : "FileFly no responde. Comprueba que siga abierto en la PC.";
     els.copy.disabled = true;
   });
 
