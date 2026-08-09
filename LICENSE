@@ -32,5 +32,5 @@ affected by the license above:
     Bundled inline in assets/web/index.html, where its notice is preserved.
 
   - The Dart and Flutter packages listed in pubspec.yaml (qr_flutter,
-    file_picker, desktop_drop, path, cupertino_icons) and the Flutter SDK
+    file_selector, desktop_drop, path, cupertino_icons) and the Flutter SDK
     itself, under their respective MIT and BSD licenses.

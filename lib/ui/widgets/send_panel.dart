@@ -1,5 +1,5 @@
 import 'package:desktop_drop/desktop_drop.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
@@ -76,13 +76,9 @@ class _SendPanelState extends State<SendPanel> {
   }
 
   Future<void> _pickFiles() async {
-    final result = await FilePicker.pickFiles(allowMultiple: true);
-    if (result == null) return;
+    final files = await openFiles();
+    if (files.isEmpty) return;
 
-    final paths = [
-      for (final file in result.files)
-        if (file.path != null) file.path!,
-    ];
-    if (paths.isNotEmpty) await widget.onFilesChosen(paths);
+    await widget.onFilesChosen([for (final file in files) file.path]);
   }
 }

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
@@ -81,7 +81,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final server = _server;
     if (server == null) return;
 
-    final picked = await FilePicker.getDirectoryPath(dialogTitle: 'Carpeta compartida de FileFly');
+    final picked = await getDirectoryPath(
+      confirmButtonText: 'Compartir',
+    );
     if (picked == null) return;
 
     final dir = Directory(picked);
