@@ -57,6 +57,14 @@ class ConnectPanel extends StatelessWidget {
             const SizedBox(height: 20),
             for (final url in shareUrls) _UrlBox(url: url),
           ],
+          const SizedBox(height: Space.md),
+          // La pregunta "¿esto es seguro?" se hace justo aquí, mirando un
+          // código que va a abrir la carpeta de la PC en otro aparato. La
+          // respuesta va donde se hace la pregunta.
+          const Text(
+            'Todo viaja por tu red local. Nada sale a internet.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.45),
+          ),
         ],
       ),
     );

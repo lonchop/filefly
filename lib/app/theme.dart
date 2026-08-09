@@ -197,6 +197,30 @@ const kMonoStyle = TextStyle(
   fontFeatures: [FontFeature.tabularFigures()],
 );
 
+const _monthNames = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+];
+
+/// La fecha de un archivo en la forma corta que usa la lista.
+///
+/// La columna existe para separar de un vistazo lo que acaba de llegar de lo
+/// que lleva ahí semanas, así que hoy se reduce a la hora y el resto a la
+/// fecha. Una marca de tiempo completa en cada fila sería una columna de ruido.
+String formatWhen(DateTime moment) {
+  final now = DateTime.now();
+  final day = DateTime(moment.year, moment.month, moment.day);
+  final today = DateTime(now.year, now.month, now.day);
+  final elapsed = today.difference(day).inDays;
+  final time = '${moment.hour.toString().padLeft(2, '0')}:'
+      '${moment.minute.toString().padLeft(2, '0')}';
+
+  if (elapsed == 0) return time;
+  if (elapsed == 1) return 'Ayer $time';
+  final date = '${moment.day} ${_monthNames[moment.month - 1]}';
+  return day.year == today.year ? date : '$date ${moment.year}';
+}
+
 String formatBytes(int bytes) {
   if (bytes <= 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
