@@ -113,8 +113,10 @@
 
     /* Explicit placement, because the DOM order is the phone order (send,
        files, connect) and auto-placement would leave column 2 empty. */
-    .grid{display:grid;grid-template-columns:1.25fr .75fr;gap:var(--s4);align-items:start}
-    .sendCard{grid-column:1;grid-row:1}
+    .grid{display:grid;grid-template-columns:1.25fr .75fr;gap:var(--s4)}
+    /* Sin stretch, la tarjeta de conectar es la alta y la de enviar dejaba un
+       hueco debajo. La misma razón por la que la ventana usa IntrinsicHeight. */
+    .sendCard{grid-column:1;grid-row:1;display:flex;flex-direction:column}
     .connectCard{grid-column:2;grid-row:1}
     .filesCard{grid-column:1/-1;grid-row:2}
 
@@ -126,7 +128,7 @@
     /* -- drop zone -------------------------------------------------------- */
 
     .drop{
-      min-height:240px;margin-top:var(--s5);padding:var(--s5);
+      flex:1;min-height:240px;margin-top:var(--s5);padding:var(--s5);
       display:flex;flex-direction:column;justify-content:center;align-items:center;
       text-align:center;gap:var(--s2);
       border:1.5px dashed var(--border-strong);border-radius:var(--r-inset);
