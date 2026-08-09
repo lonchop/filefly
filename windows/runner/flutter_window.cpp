@@ -4,8 +4,9 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
-FlutterWindow::FlutterWindow(const flutter::DartProject& project)
-    : project_(project) {}
+FlutterWindow::FlutterWindow(const flutter::DartProject& project,
+                             bool starts_hidden)
+    : project_(project), starts_hidden_(starts_hidden) {}
 
 FlutterWindow::~FlutterWindow() {}
 
@@ -28,6 +29,11 @@ bool FlutterWindow::OnCreate() {
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
+    // El arranque de sesión entra con --hidden. Esconder la ventana desde Dart
+    // llegaría tarde: para entonces ya se vio el parpadeo.
+    if (starts_hidden_) {
+      return;
+    }
     this->Show();
   });
 
@@ -51,6 +57,17 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // Un segundo arranque difunde este mensaje en vez de abrir una ventana que no
+  // podría levantar el servidor. Se atiende antes que Flutter porque no es un
+  // mensaje de interfaz.
+  static const UINT show_existing_window =
+      ::RegisterWindowMessageW(kShowExistingWindowMessage);
+  if (message == show_existing_window) {
+    Show();
+    ::SetForegroundWindow(hwnd);
+    return 0;
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

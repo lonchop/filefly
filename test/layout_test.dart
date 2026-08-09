@@ -2,77 +2,133 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:filefly/app/theme.dart';
-import 'package:filefly/ui/widgets/connect_panel.dart';
-import 'package:filefly/ui/widgets/send_panel.dart';
+import 'package:filefly/server/file_server.dart';
+import 'package:filefly/ui/widgets/files_browser.dart';
 
-/// El layout ancho pone los dos paneles de arriba en una fila y los cierra
-/// sobre un único canto inferior.
-///
-/// Esto refleja `_TopPanels`: un `IntrinsicHeight` que aporta la altura acotada
-/// que `stretch` necesita, dentro de un scroll que si no dejaría la fila sin
-/// acotar. Lo que se prueba es esa pareja: si se quita cualquiera de las dos
-/// mitades, la tarjeta de envío vuelve en silencio a ajustarse a su contenido,
-/// que es justo el hueco que este layout existe para cerrar.
-void main() {
-  testWidgets('the send card fills the height of the taller connect card', (tester) async {
-    tester.view.physicalSize = const Size(1280, 1400);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
+final _files = [
+  SharedFile(
+    name: 'informe.pdf',
+    path: '/tmp/filefly/informe.pdf',
+    size: 2 * 1024 * 1024,
+    modified: DateTime(2026, 8, 9, 14, 20),
+  ),
+  SharedFile(
+    name: 'notas.txt',
+    path: '/tmp/filefly/notas.txt',
+    size: 1200,
+    modified: DateTime(2026, 8, 8, 9, 5),
+  ),
+];
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: buildTheme(),
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: SendPanel(onFilesChosen: (_) async {}, fillHeight: true),
-                  ),
-                  const SizedBox(width: Space.xl),
-                  const SizedBox(
-                    width: 420,
-                    child: ConnectPanel(shareUrls: ['http://192.168.0.38:8765/?token=abc']),
-                  ),
-                ],
+/// Monta el navegador de archivos tal como lo monta la ventana: dentro de un
+/// `Expanded`, con una altura de ventana conocida.
+Future<void> _pump(WidgetTester tester, {bool narrow = false, double height = 800}) async {
+  tester.view.physicalSize = Size(narrow ? 600 : 1280, height);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: buildTheme(),
+      home: Scaffold(
+        body: Column(
+          children: [
+            Expanded(
+              child: FilesBrowser(
+                narrow: narrow,
+                files: _files,
+                folderPath: '/home/jose/FileFly',
+                onSend: () {},
+                onRefresh: () {},
+                onOpenFolder: () {},
+                onChangeFolder: () {},
+                onOpenFile: (_) {},
+                onDeleteFiles: (_) async {},
               ),
             ),
-          ),
+          ],
         ),
       ),
-    );
+    ),
+  );
+}
 
-    final send = tester.getSize(find.byType(SendPanel)).height;
-    final connect = tester.getSize(find.byType(ConnectPanel)).height;
+void main() {
+  testWidgets('the files card fills the window instead of shrink-wrapping', (tester) async {
+    await _pump(tester, height: 800);
 
+    // La lista es la superficie principal de la ventana, y el `Expanded` es lo
+    // que se lo da. Si se cae, la tarjeta se ajusta a sus dos filas y la barra
+    // de estado deja de estar abajo: queda flotando a media pantalla con el
+    // fondo debajo, que es exactamente el hueco que este layout existe para
+    // cerrar.
     expect(tester.takeException(), isNull);
-    expect(send, connect);
-
-    // La tarjeta de conectar es la más alta de las dos, así que una
-    // coincidencia de este tamaño solo ocurre si la tarjeta de envío creció de
-    // verdad.
-    expect(send, greaterThan(400));
+    expect(tester.getSize(find.byType(FilesBrowser)).height, 800);
   });
 
-  testWidgets('the narrow layout keeps the drop zone usable', (tester) async {
-    tester.view.physicalSize = const Size(600, 1200);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
+  testWidgets('the view toggle swaps the list for the grid', (tester) async {
+    await _pump(tester);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: buildTheme(),
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: SendPanel(onFilesChosen: (_) async {}),
-          ),
-        ),
-      ),
-    );
+    // La vista de lista es la única con cabeceras de columna.
+    expect(find.text('Nombre'), findsOneWidget);
+    expect(find.text('Fecha'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.grid_view_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fecha'), findsNothing);
+    expect(find.text('informe.pdf'), findsOneWidget);
+  });
+
+  testWidgets('selecting a file swaps the status bar for the selection bar', (tester) async {
+    await _pump(tester);
+
+    expect(find.text('2 archivos · 2.0 MB'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Seleccionar informe.pdf'));
+    await tester.pumpAndSettle();
+
+    // Las dos barras se sustituyen, no se apilan: una que apareciera empujaría
+    // la lista hacia arriba justo cuando se está apuntando a una fila.
+    expect(find.text('2 archivos · 2.0 MB'), findsNothing);
+    expect(find.text('1 seleccionado'), findsOneWidget);
+    expect(find.text('Eliminar'), findsOneWidget);
+  });
+
+  testWidgets('the search box filters the list by name', (tester) async {
+    await _pump(tester);
+
+    await tester.enterText(find.byType(TextField), 'notas');
+    await tester.pumpAndSettle();
+
+    expect(find.text('notas.txt'), findsOneWidget);
+    expect(find.text('informe.pdf'), findsNothing);
+    // La cuenta dice de cuántos, o parecería que la carpeta perdió archivos.
+    expect(find.text('1 de 2 · 1.2 KB'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'zzz');
+    await tester.pumpAndSettle();
+    expect(find.text('Limpiar la búsqueda'), findsOneWidget);
+  });
+
+  testWidgets('select all only takes the files the filter is showing', (tester) async {
+    await _pump(tester);
+
+    await tester.enterText(find.byType(TextField), 'notas');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Seleccionar todo'));
+    await tester.pumpAndSettle();
+
+    // Con un filtro puesto, arrastrar los archivos ocultos sería una trampa: el
+    // botón de eliminar está en esa misma barra.
+    expect(find.text('1 seleccionado'), findsOneWidget);
+  });
+
+  testWidgets('the narrow window drops the date column, not the size', (tester) async {
+    await _pump(tester, narrow: true);
 
     expect(tester.takeException(), isNull);
-    expect(tester.getSize(find.byType(SendPanel)).height, greaterThan(240));
+    expect(find.text('Tamaño'), findsOneWidget);
+    expect(find.text('Fecha'), findsNothing);
   });
 }

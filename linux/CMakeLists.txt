@@ -74,6 +74,13 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# tray_manager llama a la API de appindicator que GTK dio por obsoleta, y el
+# -Werror de arriba convierte ese aviso en un build roto por código que no es
+# nuestro. Se relaja solo para ese plugin, no para el runner.
+if(TARGET tray_manager_plugin)
+  target_compile_options(tray_manager_plugin PRIVATE -Wno-deprecated-declarations)
+endif()
+
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build

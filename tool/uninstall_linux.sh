@@ -7,6 +7,7 @@ PREFIX="${XDG_DATA_HOME:-$HOME/.local/share}"
 
 rm -rf "$PREFIX/filefly"
 rm -f "$PREFIX/applications/filefly.desktop"
+rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/filefly.desktop"
 rm -f "$HOME/.local/bin/filefly"
 for size in 16 22 24 32 48 64 128 256 512; do
   rm -f "$PREFIX/icons/hicolor/${size}x${size}/apps/filefly.png"

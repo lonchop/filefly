@@ -14,8 +14,23 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+// Devuelve si el arranque pidió quedarse solo en la bandeja.
+static gboolean starts_hidden(MyApplication* self) {
+  if (self->dart_entrypoint_arguments == nullptr) {
+    return FALSE;
+  }
+  return g_strv_contains(
+      const_cast<const gchar* const*>(self->dart_entrypoint_arguments),
+      "--hidden");
+}
+
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
+  // El arranque de sesión entra con --hidden. Esconder la ventana desde Dart
+  // llegaría tarde: para entonces ya se vio el parpadeo.
+  if (starts_hidden(self)) {
+    return;
+  }
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 

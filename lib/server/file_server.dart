@@ -158,12 +158,6 @@ class FileServer {
     }
 
     switch ((request.method, path)) {
-      case ('GET', '/api/config'):
-        await _sendJson(request, {
-          'port': _server?.port,
-          'urls': _shareUrls,
-          'hostname': Platform.localHostname,
-        });
       case ('GET', '/api/files'):
         await _sendJson(request, {
           'files': [
@@ -218,16 +212,35 @@ class FileServer {
     if (file == null) return;
 
     final name = p.basename(file.path);
-    request.response
+    // La vista de cuadrícula pide el archivo con `inline=1` para pintarlo como
+    // miniatura. Solo se responde así a las imágenes: un HTML servido en línea
+    // correría en el mismo origen que la página y podría llamar a la API con la
+    // cookie de sesión de quien lo abriera. Todo lo demás baja como adjunto,
+    // que es inerte.
+    final inlineType = query['inline'] == '1' ? imageContentType(name) : null;
+    final response = request.response
       ..statusCode = HttpStatus.ok
-      ..headers.contentType = ContentType.binary
-      ..headers.set('content-disposition',
-          "attachment; filename*=UTF-8''${Uri.encodeComponent(name)}")
-      ..headers.set(HttpHeaders.cacheControlHeader, 'no-store')
       ..contentLength = await file.length();
 
-    await request.response.addStream(file.openRead());
-    await request.response.close();
+    if (inlineType == null) {
+      response
+        ..headers.contentType = ContentType.binary
+        ..headers.set('content-disposition',
+            "attachment; filename*=UTF-8''${Uri.encodeComponent(name)}")
+        ..headers.set(HttpHeaders.cacheControlHeader, 'no-store');
+    } else {
+      response
+        ..headers.set(HttpHeaders.contentTypeHeader, inlineType)
+        // El tipo lo decide la extensión, así que el navegador no debe olfatear
+        // el contenido y llegar a una conclusión distinta.
+        ..headers.set('x-content-type-options', 'nosniff')
+        // Reordenar la lista repinta la cuadrícula entera; sin caché cada
+        // reordenación volvería a bajar todas las fotos.
+        ..headers.set(HttpHeaders.cacheControlHeader, 'private, max-age=300');
+    }
+
+    await response.addStream(file.openRead());
+    await response.close();
   }
 
   Future<void> _handleDelete(HttpRequest request, Map<String, String> query) async {
@@ -355,6 +368,26 @@ class FileServer {
     await request.response.close();
   }
 }
+
+/// Formatos de imagen que la cuadrícula puede pedir en línea, y su tipo MIME.
+///
+/// Es una lista blanca, no una tabla de conveniencia: lo que no esté aquí se
+/// sirve como adjunto binario. Añadir un formato que el navegador pueda
+/// ejecutar (SVG entre ellos, que lleva script) convertiría la carpeta
+/// compartida en un vector de XSS contra la propia página.
+const _inlineImageTypes = <String, String>{
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+  '.bmp': 'image/bmp',
+};
+
+/// El tipo MIME con el que se puede servir [name] en línea, o null si no es una
+/// imagen de la lista blanca.
+String? imageContentType(String name) => _inlineImageTypes[p.extension(name).toLowerCase()];
 
 /// Reduce cualquier nombre a un nombre de archivo plano, para que no se pueda
 /// escribir ni leer fuera de la carpeta compartida.

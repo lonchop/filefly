@@ -1,4 +1,4 @@
-; Inno Setup script for FileFly.
+﻿; Inno Setup script for FileFly.
 ;
 ; Flutter cannot produce a single self-contained executable: the engine lives in
 ; flutter_windows.dll and the assets in data\, both loaded from disk next to the
@@ -34,15 +34,27 @@ WizardStyle=modern
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[CustomMessages]
+spanish.AutoStartTask=Arrancar FileFly con la sesión, en la bandeja
+english.AutoStartTask=Start FileFly with Windows, in the tray
+spanish.AutoStartGroup=Arranque
+english.AutoStartGroup=Startup
+
 [Files]
 Source: "..\..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\FileFly"; Filename: "{app}\filefly.exe"
 Name: "{autodesktop}\FileFly"; Filename: "{app}\filefly.exe"; Tasks: desktopicon
+; --hidden deja la ventana sin mostrarse: en el arranque de sesión FileFly solo
+; tiene que quedar en la bandeja para que el celular lo encuentre.
+Name: "{userstartup}\FileFly"; Filename: "{app}\filefly.exe"; Parameters: "--hidden"; Tasks: autostart
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+; Marcada por defecto, igual que tool/install_linux.sh, que escribe la entrada
+; de autostart sin preguntar.
+Name: "autostart"; Description: "{cm:AutoStartTask}"; GroupDescription: "{cm:AutoStartGroup}"
 
 [Run]
 Filename: "{app}\filefly.exe"; Description: "{cm:LaunchProgram,FileFly}"; Flags: nowait postinstall skipifsilent

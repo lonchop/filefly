@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
@@ -8,8 +9,7 @@ import '../app/theme.dart';
 import '../server/app_paths.dart';
 import '../server/file_server.dart';
 import 'widgets/connect_panel.dart';
-import 'widgets/send_panel.dart';
-import 'widgets/shared_files_panel.dart';
+import 'widgets/files_browser.dart';
 
 const _defaultPort = 8765;
 
@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   StreamSubscription<void>? _changes;
   List<SharedFile> _files = const [];
   String? _startupError;
+  bool _dragging = false;
 
   @override
   void initState() {
@@ -63,6 +64,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Corta o levanta el servidor desde la insignia de estado.
+  ///
+  /// El token no rota al reiniciar, así que el QR impreso y los celulares ya
+  /// emparejados siguen valiendo cuando se vuelve a conectar. Por eso esto no
+  /// pide confirmación: es reversible con el mismo clic.
+  Future<void> _toggleServer() async {
+    final server = _server;
+    if (server == null) return;
+    if (server.isRunning) {
+      await server.stop();
+    } else {
+      await server.start(port: _defaultPort);
+    }
+    if (mounted) setState(() {});
+  }
+
   Future<void> _refresh() async {
     final files = await _server?.listFiles() ?? const <SharedFile>[];
     if (mounted) setState(() => _files = files);
@@ -79,13 +96,18 @@ class _HomeScreenState extends State<HomeScreen> {
     await _refresh();
   }
 
+  Future<void> _pickFiles() async {
+    final files = await openFiles();
+    if (files.isEmpty) return;
+
+    await _addFiles([for (final file in files) file.path]);
+  }
+
   Future<void> _changeFolder() async {
     final server = _server;
     if (server == null) return;
 
-    final picked = await getDirectoryPath(
-      confirmButtonText: 'Compartir',
-    );
+    final picked = await getDirectoryPath(confirmButtonText: 'Compartir');
     if (picked == null) return;
 
     final dir = Directory(picked);
@@ -100,13 +122,18 @@ class _HomeScreenState extends State<HomeScreen> {
     await Process.run(command, [path]);
   }
 
-  Future<void> _deleteFile(SharedFile file) async {
+  Future<void> _deleteFiles(List<SharedFile> files) async {
+    if (files.isEmpty) return;
+
+    final what = files.length == 1
+        ? 'Se borra "${files.first.name}".'
+        : 'Se borran ${files.length} archivos.';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Eliminar archivo'),
-        content: Text('Se borra "${file.name}". No se puede deshacer.'),
+        title: Text(files.length == 1 ? 'Eliminar archivo' : 'Eliminar archivos'),
+        content: Text('$what No se puede deshacer.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -121,8 +148,33 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (confirmed != true) return;
 
-    await _server?.deleteFile(file.path);
+    for (final file in files) {
+      await _server?.deleteFile(file.path);
+    }
     await _refresh();
+  }
+
+  /// El QR vive en un diálogo, no en la ventana.
+  ///
+  /// Emparejar es algo que se hace una vez por celular; la carpeta compartida
+  /// es lo que se mira todos los días. Mientras el código ocupó media pantalla,
+  /// la lista de archivos empezaba por debajo del pliegue.
+  void _showConnect() {
+    final server = _server;
+    if (server == null) return;
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: SingleChildScrollView(
+            child: ConnectPanel(shareUrls: server.shareUrls),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -137,49 +189,59 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, constraints) {
             final narrow = constraints.maxWidth < kNarrowWindow;
 
-            return Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1180),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(narrow ? Space.lg : Space.xxl),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _Header(running: server?.isRunning ?? false, narrow: narrow),
-                      const SizedBox(height: Space.xl + Space.xs),
-                      if (_startupError != null)
-                        _ErrorCard(message: _startupError!)
-                      else if (server == null)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 80),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else ...[
-                        _TopPanels(
-                          narrow: narrow,
-                          send: SendPanel(onFilesChosen: _addFiles, fillHeight: !narrow),
-                          connect: ConnectPanel(shareUrls: server.shareUrls),
-                        ),
-                        const SizedBox(height: Space.xl),
-                        SharedFilesPanel(
-                          narrow: narrow,
-                          files: _files,
-                          folderPath: server.sharedDirectory.path,
-                          onRefresh: _refresh,
-                          onOpenFolder: () => _openInDesktop(server.sharedDirectory.path),
-                          onChangeFolder: _changeFolder,
-                          onOpenFile: (file) => _openInDesktop(file.path),
-                          onDeleteFile: _deleteFile,
-                        ),
-                      ],
-                      const SizedBox(height: Space.xl),
-                      const Center(
-                        child: Text(
-                          'Todo viaja por tu red local. Nada sale a internet.',
-                          style: TextStyle(color: AppColors.textMuted, fontSize: 12),
-                        ),
+            // La ventana entera acepta archivos. La zona de soltar dejó de ser
+            // una tarjeta con su propio canto: un blanco del tamaño de la
+            // ventana es mejor blanco que un rectángulo dentro de ella, y así
+            // no le roba sitio a la lista.
+            return DropTarget(
+              onDragEntered: (_) => setState(() => _dragging = true),
+              onDragExited: (_) => setState(() => _dragging = false),
+              onDragDone: (details) {
+                setState(() => _dragging = false);
+                unawaited(_addFiles([for (final file in details.files) file.path]));
+              },
+              child: AnimatedContainer(
+                duration: kMotion,
+                color: _dragging ? AppColors.accentDeep : AppColors.background,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1180),
+                    child: Padding(
+                      padding: EdgeInsets.all(narrow ? Space.lg : Space.xxl),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _Header(
+                            narrow: narrow,
+                            running: server?.isRunning ?? false,
+                            onConnect: server == null || !server.isRunning ? null : _showConnect,
+                            onToggle: server == null ? null : _toggleServer,
+                          ),
+                          SizedBox(height: narrow ? Space.lg : Space.xl),
+                          Expanded(
+                            child: _startupError != null
+                                ? Align(
+                                    alignment: Alignment.topCenter,
+                                    child: _ErrorCard(message: _startupError!),
+                                  )
+                                : server == null
+                                    ? const Center(child: CircularProgressIndicator())
+                                    : FilesBrowser(
+                                        narrow: narrow,
+                                        files: _files,
+                                        folderPath: server.sharedDirectory.path,
+                                        onSend: _pickFiles,
+                                        onRefresh: _refresh,
+                                        onOpenFolder: () =>
+                                            _openInDesktop(server.sharedDirectory.path),
+                                        onChangeFolder: _changeFolder,
+                                        onOpenFile: (file) => _openInDesktop(file.path),
+                                        onDeleteFiles: _deleteFiles,
+                                      ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -191,150 +253,128 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// Enviar y conectar van uno al lado del otro mientras hay sitio, y se apilan
-/// en cuanto la ventana se queda demasiado estrecha para que la placa del QR y
-/// una zona de soltar legible compartan fila.
-class _TopPanels extends StatelessWidget {
-  const _TopPanels({required this.narrow, required this.send, required this.connect});
-
-  final bool narrow;
-  final Widget send;
-  final Widget connect;
-
-  @override
-  Widget build(BuildContext context) {
-    if (narrow) {
-      return Column(
-        children: [send, const SizedBox(height: Space.lg), connect],
-      );
-    }
-
-    // Las dos tarjetas comparten la altura de la más alta, para que la fila
-    // cierre en una sola línea. Dejar que cada una terminara en su propio
-    // contenido hacía que la tarjeta de envío se quedara corta frente a la del
-    // QR y, como el fondo de la ventana está a un paso del relleno de la
-    // tarjeta, ese hueco pasaba a ser la forma vacía más grande de la pantalla:
-    // parecía un fallo de renderizado, no una composición.
-    //
-    // La tarjeta de envío es la que absorbe la diferencia: su zona de soltar
-    // crece hacia la altura sobrante, que es el sentido correcto. Un blanco de
-    // soltar más grande es un blanco mejor, y es la tarjeta que debe dominar la
-    // fila.
-    //
-    // IntrinsicHeight es lo que le da a `stretch` una altura acotada con la que
-    // trabajar: esta fila vive dentro de un scroll, así que su propia altura no
-    // está acotada. La tarjeta del QR puede responder a la consulta intrínseca
-    // porque su placa es un SizedBox ajustado; ver connect_panel.dart.
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: send),
-          const SizedBox(width: Space.xl),
-          SizedBox(width: 420, child: connect),
-        ],
-      ),
-    );
-  }
-}
-
+/// Marca, estado del servidor y la puerta al emparejamiento. Una sola fila:
+/// todo lo que no sea la carpeta compartida cabe aquí.
 class _Header extends StatelessWidget {
-  const _Header({required this.running, required this.narrow});
+  const _Header({
+    required this.narrow,
+    required this.running,
+    required this.onConnect,
+    required this.onToggle,
+  });
 
-  final bool running;
   final bool narrow;
+  final bool running;
+  final VoidCallback? onConnect;
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {
-    // El logotipo va al lado de la marca; la descripción ocupa todo el ancho
-    // por debajo de los dos, para que una ventana estrecha nunca la exprima
-    // hasta dejarla en una columna fina.
-    final title = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final brand = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              'assets/icons/filefly-128.png',
-              width: narrow ? 40 : 52,
-              height: narrow ? 40 : 52,
-              filterQuality: FilterQuality.medium,
-            ),
-            SizedBox(width: narrow ? Space.md : Space.lg),
-            Text(
-              'FileFly',
-              style: TextStyle(
-                fontSize: narrow ? 30 : 36,
-                fontWeight: FontWeight.w800,
-                height: 1.05,
-                letterSpacing: -1,
-              ),
-            ),
-          ],
+        Image.asset(
+          'assets/icons/filefly-128.png',
+          width: narrow ? 34 : 40,
+          height: narrow ? 34 : 40,
+          filterQuality: FilterQuality.medium,
         ),
-        const SizedBox(height: Space.sm),
-        const Text(
-          'Archivos entre la PC y el celular. Sin cable ni apps.',
-          style: TextStyle(color: AppColors.textMuted, height: 1.45),
+        SizedBox(width: narrow ? Space.sm : Space.md),
+        Text(
+          'FileFly',
+          style: TextStyle(
+            fontSize: narrow ? 24 : 28,
+            fontWeight: FontWeight.w800,
+            height: 1.05,
+            letterSpacing: -0.8,
+          ),
         ),
       ],
     );
 
-    final status = _StatusBadge(running: running);
-
-    if (narrow) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [title, const SizedBox(height: Space.md), status],
-      );
-    }
+    // En una ventana estrecha el botón se queda sin etiqueta, no la insignia
+    // sin sitio: si el servidor se cayó, eso no se puede deducir de ninguna
+    // otra cosa en pantalla, mientras que un código QR se reconoce solo.
+    final connect = narrow
+        ? IconButton.filled(
+            onPressed: onConnect,
+            tooltip: 'Conectar el celular',
+            icon: const Icon(Icons.qr_code_2_rounded, size: 20),
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: AppColors.accentInk,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(Radii.control),
+              ),
+            ),
+          )
+        : FilledButton.icon(
+            onPressed: onConnect,
+            icon: const Icon(Icons.qr_code_2_rounded, size: 18),
+            label: const Text('Conectar el celular'),
+          );
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: title),
-        const SizedBox(width: Space.lg),
-        status,
+        brand,
+        const Spacer(),
+        _StatusBadge(running: running, onToggle: onToggle),
+        const SizedBox(width: Space.sm),
+        connect,
       ],
     );
   }
 }
 
+/// La insignia de estado es además el interruptor del servidor.
+///
+/// El control que dice si algo está encendido es el sitio natural para
+/// apagarlo, y así el encabezado no gana un tercer botón al lado del de
+/// emparejar. La etiqueta ya nombra el estado; el tooltip nombra la acción.
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.running});
+  const _StatusBadge({required this.running, required this.onToggle});
 
   final bool running;
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: Space.lg, vertical: Space.md - 2),
-      decoration: BoxDecoration(
+    return Tooltip(
+      message: running ? 'Cortar la conexión' : 'Volver a conectar',
+      child: Material(
         color: AppColors.surface,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Punto plano. La etiqueta que tiene al lado es la que enuncia el
-          // estado; el punto no necesita un halo para decirlo dos veces.
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: running ? AppColors.accent : AppColors.danger,
-              shape: BoxShape.circle,
+        shape: const StadiumBorder(side: BorderSide(color: AppColors.border)),
+        child: InkWell(
+          onTap: onToggle,
+          customBorder: const StadiumBorder(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Space.lg, vertical: Space.md - 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Punto plano. La etiqueta que tiene al lado es la que enuncia
+                // el estado; el punto no necesita un halo para decirlo dos
+                // veces.
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: running ? AppColors.accent : AppColors.danger,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: Space.sm + 2),
+                // Las mismas dos etiquetas que la página del celular. Que cada
+                // superficie llamara al mismo estado de forma distinta obligaba
+                // a traducir entre pantalla y pantalla.
+                Text(
+                  running ? 'Conectado' : 'Sin conexión',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: Space.sm + 2),
-          // Las mismas dos etiquetas que la página del celular. Que cada
-          // superficie llamara al mismo estado de forma distinta obligaba a
-          // traducir entre pantalla y pantalla.
-          Text(running ? 'Conectado' : 'Sin conexión', style: const TextStyle(fontSize: 13)),
-        ],
+        ),
       ),
     );
   }
@@ -350,6 +390,7 @@ class _ErrorCard extends StatelessWidget {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           const Text('No se pudo iniciar FileFly',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),

@@ -123,9 +123,56 @@ void main() {
     expect(File(p.join(shared.path, 'foto.png')).existsSync(), isFalse);
   });
 
+  test('serves an image inline so the grid can show a thumbnail', () async {
+    File(p.join(shared.path, 'foto.png')).writeAsStringSync('bytes');
+
+    final response = await send('GET', '/api/download?token=$_token&name=foto.png&inline=1');
+
+    expect(response.statusCode, HttpStatus.ok);
+    expect(response.headers.contentType.toString(), 'image/png');
+    expect(response.headers.value('content-disposition'), isNull);
+    expect(response.headers.value('x-content-type-options'), 'nosniff');
+    await response.drain<void>();
+  });
+
+  test('never serves anything but a whitelisted image inline', () async {
+    // Un HTML servido en línea correría en el mismo origen que la página, con
+    // la cookie de sesión de quien lo abriera: podría vaciar la carpeta
+    // compartida desde dentro. Esta es la guarda de que `inline` no es un
+    // interruptor genérico.
+    for (final name in ['pagina.html', 'dibujo.svg', 'script.js', 'nota.txt']) {
+      File(p.join(shared.path, name)).writeAsStringSync('<script>alert(1)</script>');
+
+      final response = await send('GET', '/api/download?token=$_token&name=$name&inline=1');
+
+      expect(response.headers.contentType?.mimeType, 'application/octet-stream',
+          reason: '$name no debe servirse con un tipo que el navegador ejecute');
+      expect(response.headers.value('content-disposition'), contains('attachment'),
+          reason: '$name debe bajar como adjunto');
+      await response.drain<void>();
+    }
+  });
+
   test('refuses to reach outside the shared folder on download', () async {
     final response = await send('GET', '/api/download?token=$_token&name=../../../etc/passwd');
     expect(response.statusCode, HttpStatus.notFound);
+  });
+
+  // El interruptor de la insignia de estado apaga y enciende el servidor sin
+  // reconstruirlo. Si volver a levantarlo no funcionara, el usuario quedaría
+  // obligado a reiniciar la app entera para recuperar la conexión.
+  test('stop and start again with the same token', () async {
+    await server.stop();
+    expect(server.isRunning, isFalse);
+    expect(server.shareUrls, isEmpty);
+
+    await server.start(port: 0);
+    base = 'http://127.0.0.1:${server.port}';
+    final response = await send('GET', '/api/files?token=$_token');
+
+    expect(server.isRunning, isTrue);
+    expect(response.statusCode, HttpStatus.ok);
+    await response.drain<void>();
   });
 
   test('safeFileName strips every path component', () {
