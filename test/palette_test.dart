@@ -102,4 +102,16 @@ void main() {
       expect(manifest['theme_color'], '#080e15');
     });
   });
+
+  group('icono de Windows', () {
+    // El .ico del runner ya se coló una vez como el del template de Flutter, y
+    // el fallo no se ve hasta abrir el instalador en Windows.
+    test('el runner y la bandeja comparten un .ico que no es el de Flutter', () {
+      final runnerIcon = File('windows/runner/resources/app_icon.ico').readAsBytesSync();
+      final assetIcon = File('assets/icons/filefly.ico').readAsBytesSync();
+
+      expect(runnerIcon, assetIcon);
+      expect(runnerIcon.length, isNot(33772), reason: 'es el app_icon.ico del template de Flutter');
+    });
+  });
 }
