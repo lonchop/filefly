@@ -1,0 +1,71 @@
+---
+description: Contexto de FileFly. App de escritorio Flutter (Linux y Windows) que pasa archivos entre la PC y el celular por la red local.
+globs: ["*"]
+alwaysApply: true
+---
+
+# Contexto FileFly
+
+App de escritorio en Flutter, sin backend remoto y sin internet. La PC corre
+todo; el celular solo escanea un QR y usa su navegador.
+
+## Estructura
+
+```
+filefly/
+├── lib/
+│   ├── main.dart              # carga la página del celular, inyecta la paleta, arranca la app
+│   ├── app/
+│   │   ├── palette.dart       # el único sitio donde vive un hex, y la fuente de los tokens CSS
+│   │   └── theme.dart         # ThemeData, Space, Radii, kMotion, AppCard, SectionTitle
+│   ├── server/
+│   │   ├── file_server.dart   # HttpServer de dart:io, rutas, auth, carpeta compartida
+│   │   ├── lan_addresses.dart # qué IPs alcanza de verdad un celular
+│   │   └── app_paths.dart     # token y carpeta compartida, por convención de plataforma
+│   └── ui/
+│       ├── home_screen.dart   # dueño del FileServer, de la lista de archivos y del layout
+│       └── widgets/           # send_panel, connect_panel, shared_files_panel
+├── assets/web/index.html      # la página que carga el celular, autocontenida
+├── test/                      # file_server_test, palette_test, layout_test
+└── tool/                      # instalación y desinstalación a nivel usuario en Linux
+```
+
+## Stack
+
+Flutter, Dart 3.10+ | `dart:io` HttpServer | qr_flutter | file_selector |
+desktop_drop | path
+
+Sin gestor de estado, sin router, sin cliente HTTP, sin base de datos. Lo que
+hay es lo que hace falta.
+
+## La idea que hay que tener presente
+
+La ventana nativa y el navegador del celular son **dos clientes de la misma
+carpeta**. La ventana no pasa por HTTP: lee y escribe el directorio compartido
+directamente y se repinta cuando `FileServer.changes` emite.
+
+Dos superficies, un solo producto. La paleta de `palette.dart` se inyecta en el
+`:root` de `index.html` al arrancar, y el marcador `/*__FILEFLY_TOKENS__*/` es
+obligatorio. Un color añadido a una superficie y no a la otra es un bug de
+deriva, no una diferencia.
+
+## Seguridad
+
+- Token de 32 caracteres hexadecimales, persistido con permisos 600 en el
+  directorio de configuración de la plataforma, reutilizado entre arranques.
+- La primera visita a `/?token=…` cambia el token por una cookie `HttpOnly`,
+  `SameSite=Lax` de 30 días y redirige a `/` limpio.
+- Comparación del token en tiempo constante.
+- `safeFileName` reduce cualquier nombre a un nombre plano antes de tocar el
+  disco, en subida, descarga y borrado.
+- Solo se anuncian las interfaces que un teléfono de la Wi-Fi puede alcanzar.
+  Los túneles VPN y los puentes de contenedores se filtran por nombre.
+
+Límites asumidos: HTTP plano sin TLS, token de larga vida y subidas sin tope de
+tamaño.
+
+## Reglas
+
+- Código y convenciones: `.cursor/rules/dart-rules.md`
+- Diseño de las dos superficies: `CLAUDE.md`
+- Mensajes de commit: `.cursor/rules/commit-message-rules.md`

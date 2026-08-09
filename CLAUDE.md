@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Rules
+
+Read these before writing code. They are mirrored in `.cursor/` for Cursor,
+which does not read this file.
+
+- `.claude/rules/dart-rules.md` — Dart and Flutter conventions for this repo.
+- `.claude/rules/filefly-contexto.mdc` — project context in short form.
+- `.claude/rules/commit-message-rules.md` — commit format, applied by
+  `.claude/commands/commit-message.md`.
+
+**Code in English, comments in Spanish.** Identifiers, class names, function
+names and file names are English; comments and dartdoc are neutral, professional
+Spanish. UI copy is Spanish. This file and `README.md` stay in English — they
+address the agent and the reader, not the compiler.
+
 ## Commands
 
 ```bash
