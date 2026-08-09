@@ -10,8 +10,9 @@ import 'ui/home_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // The page phones load. Read once here so the server layer never touches
-  // Flutter's asset bundle, and stamped with the same palette the window uses.
+  // La página que cargan los celulares. Se lee una sola vez aquí para que la
+  // capa del servidor nunca toque el asset bundle de Flutter, y se le estampa
+  // la misma paleta que usa la ventana.
   final indexHtml = withPaletteTokens(
     await rootBundle.loadString('assets/web/index.html'),
   );

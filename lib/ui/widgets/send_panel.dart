@@ -4,19 +4,21 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
 
-/// Drop zone plus file picker: the desktop side of "send a file".
+/// Zona de soltar más selector de archivos: el lado de escritorio de "mandar un
+/// archivo".
 class SendPanel extends StatefulWidget {
   const SendPanel({super.key, required this.onFilesChosen, this.fillHeight = false});
 
   final Future<void> Function(List<String> paths) onFilesChosen;
 
-  /// Set when the card sits beside the taller connect card and has a bounded
-  /// height to grow into. Stacked in a narrow window there is no height to
-  /// fill, and an `Expanded` would have nothing to resolve against.
+  /// Se activa cuando la tarjeta va al lado de la tarjeta de conectar, que es
+  /// más alta, y tiene una altura acotada hacia la que crecer. Apilada en una
+  /// ventana estrecha no hay altura que rellenar, y un `Expanded` no tendría
+  /// nada contra lo que resolverse.
   ///
-  /// This is not the old `fill` flag: that one stretched a bordered box drawn
-  /// inside the card. The card itself is the drop target now, so filling it is
-  /// growing the target.
+  /// No es el antiguo indicador `fill`: aquel estiraba una caja con borde
+  /// dibujada dentro de la tarjeta. Ahora la tarjeta misma es el blanco de
+  /// soltar, así que rellenarla es agrandar el blanco.
   final bool fillHeight;
 
   @override
@@ -28,14 +30,15 @@ class _SendPanelState extends State<SendPanel> {
 
   @override
   Widget build(BuildContext context) {
-    // No inner box: the card itself is the drop target. A bordered rectangle
-    // inside a bordered rectangle was the window's loudest repetition, and the
-    // zone never needed its own edge to be droppable — the whole card accepts
-    // the file, and the tint on drag is what confirms it.
+    // Sin caja interior: la tarjeta misma es el blanco de soltar. Un
+    // rectángulo con borde dentro de otro rectángulo con borde era la
+    // repetición más ruidosa de la ventana, y la zona nunca necesitó un canto
+    // propio para aceptar archivos: la tarjeta entera acepta el archivo, y el
+    // tinte al arrastrar es lo que lo confirma.
     final zone = ConstrainedBox(
-      // Floor for the stacked layout, where the card has no sibling to match.
-      // Beside the connect card the zone takes whatever height is left over,
-      // which is most of the card.
+      // Suelo para el layout apilado, donde la tarjeta no tiene hermana a la
+      // que igualarse. Al lado de la tarjeta de conectar, la zona se queda con
+      // la altura que sobre, que es casi toda la tarjeta.
       constraints: const BoxConstraints(minHeight: 180),
       child: Center(
         child: Column(

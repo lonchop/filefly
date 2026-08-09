@@ -3,7 +3,8 @@ import 'dart:math';
 
 import 'package:path/path.dart' as p;
 
-/// Where FileFly keeps its token and its settings, per platform convention.
+/// Dónde guarda FileFly su token y sus preferencias, según la convención de
+/// cada plataforma.
 Directory configDirectory() {
   final env = Platform.environment;
   final String base;
@@ -25,11 +26,12 @@ File get _tokenFile => File(p.join(configDirectory().path, 'token'));
 
 File get _sharedDirFile => File(p.join(configDirectory().path, 'shared_dir'));
 
-/// The access token, reused across runs.
+/// El token de acceso, reutilizado entre arranques.
 ///
-/// Regenerating it on every launch would silently invalidate the QR code, the
-/// saved link and the cookie of every phone that already paired, leaving no
-/// way back in. [rotate] is the deliberate "lock everyone out" path.
+/// Regenerarlo en cada lanzamiento invalidaría en silencio el código QR, el
+/// enlace guardado y la cookie de todos los celulares ya emparejados, sin
+/// ninguna vía de vuelta. [rotate] es el camino deliberado para dejar a todo el
+/// mundo fuera.
 Future<String> loadToken({bool rotate = false}) async {
   final file = _tokenFile;
   if (!rotate && await file.exists()) {
@@ -41,7 +43,8 @@ Future<String> loadToken({bool rotate = false}) async {
   final token = List.generate(32, (_) => '0123456789abcdef'[random.nextInt(16)]).join();
   await file.writeAsString(token);
   if (!Platform.isWindows) {
-    // Dart cannot chmod; the token is a secret, so keep it owner-only.
+    // Dart no sabe hacer chmod; el token es un secreto, así que hay que
+    // dejarlo accesible solo para su dueño.
     await Process.run('chmod', ['600', file.path]);
   }
   return token;

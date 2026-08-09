@@ -177,7 +177,8 @@ currently exist in this repo. Do not introduce them.
 2. Design the unhappy paths. Loading, empty, error, disabled. `_ErrorCard` and
    `_NoNetwork` are the pattern to follow.
 3. Keep the comment discipline. This codebase explains *why* a value was chosen,
-   not what the line does. Match that or do not comment.
+   not what the line does, and it does it in Spanish. Match that or do not
+   comment.
 4. Run `flutter test`. `palette_test.dart` enforces WCAG AA contrast,
    `layout_test.dart` enforces the responsive breakpoint at `kNarrowWindow`.
 

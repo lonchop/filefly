@@ -2,49 +2,52 @@ import 'dart:convert';
 
 import 'package:flutter/painting.dart';
 
-/// Marker the served page carries inside its `:root` block. [withPaletteTokens]
-/// swaps it for the real custom properties at startup.
+/// Marcador que la página servida lleva dentro de su bloque `:root`.
+/// [withPaletteTokens] lo cambia por las custom properties reales al arrancar.
 const paletteTokenMarker = '/*__FILEFLY_TOKENS__*/';
 
-/// FileFly's colors, sampled from the logo: a navy hull, a sky-blue plane and
-/// an ice-toned screen.
+/// Los colores de FileFly, tomados del logo: un fuselaje azul marino, un avión
+/// celeste y una pantalla de tono hielo.
 ///
-/// This is the only place a hex value lives. The window renders these through
-/// [buildTheme], and the page served to phones has the same values injected
-/// into its `:root` block by [withPaletteTokens] — so the two surfaces cannot
-/// drift apart the way two hand-kept lists did.
+/// Este es el único sitio donde vive un valor hexadecimal. La ventana los
+/// renderiza a través de [buildTheme], y la página que se sirve a los celulares
+/// recibe esos mismos valores inyectados en su bloque `:root` por
+/// [withPaletteTokens], de modo que las dos superficies no pueden separarse
+/// como se separaron dos listas mantenidas a mano.
 ///
-/// Every foreground/background pair used by the UI clears WCAG AA (4.5:1 for
-/// text, 3:1 for interactive borders); see `test/palette_test.dart`.
+/// Cada par de primer plano y fondo que usa la interfaz supera WCAG AA (4,5:1
+/// para texto, 3:1 para bordes interactivos); ver `test/palette_test.dart`.
 abstract final class AppColors {
-  /// Page background. Off-black tinted with the logo's navy, never pure black.
+  /// Fondo de la página. Casi negro, teñido con el azul marino del logo, nunca
+  /// negro puro.
   static const background = Color(0xFF080E15);
 
-  /// Card and panel background.
+  /// Fondo de tarjetas y paneles.
   static const surface = Color(0xFF101A24);
 
-  /// Inset surfaces: file rows, URL boxes, progress track.
+  /// Superficies embutidas: filas de archivo, cajas de URL, pista de progreso.
   static const surfaceMuted = Color(0xFF17232F);
 
-  /// Hairline that gives structure. Decorative — not a state indicator.
+  /// Filete que da estructura. Es decorativo, no indica un estado.
   static const border = Color(0xFF223240);
 
-  /// Border of an interactive control. Clears 3:1 against both surfaces.
+  /// Borde de un control interactivo. Supera 3:1 contra ambas superficies.
   static const borderStrong = Color(0xFF587085);
 
-  /// The plane in the logo. The single accent — there is no second one.
+  /// El avión del logo. El único acento: no hay un segundo.
   static const accent = Color(0xFF90D8F1);
 
-  /// Accent under hover and focus.
+  /// El acento bajo hover y foco.
   static const accentStrong = Color(0xFFB4E6F7);
 
-  /// Text and icons drawn on top of [accent].
+  /// Texto e iconos dibujados encima de [accent].
   static const accentInk = Color(0xFF072430);
 
-  /// The hull in the logo. Carries accent meaning where a fill would shout.
+  /// El fuselaje del logo. Carga el significado del acento donde un relleno
+  /// gritaría.
   static const accentDeep = Color(0xFF21476C);
 
-  /// The logo's screen tone, used for body text.
+  /// El tono de la pantalla del logo, usado para el texto corrido.
   static const text = Color(0xFFE4EFF5);
 
   static const textMuted = Color(0xFF8FA6B6);
@@ -52,10 +55,10 @@ abstract final class AppColors {
   static const danger = Color(0xFFF09AA6);
 }
 
-/// The `:root` custom properties the served page reads.
+/// Las custom properties del `:root` que lee la página servida.
 ///
-/// Names are consumed by `assets/web/index.html`; renaming one here without
-/// renaming it there leaves that rule falling back to its initial value.
+/// Los nombres los consume `assets/web/index.html`; renombrar uno aquí sin
+/// renombrarlo allí deja esa regla cayendo a su valor inicial.
 String buildCssTokens() {
   const tokens = <String, Color>{
     '--ink': AppColors.background,
@@ -75,11 +78,11 @@ String buildCssTokens() {
   return [for (final entry in tokens.entries) '${entry.key}:${_hex(entry.value)}'].join(';');
 }
 
-/// Returns [html] with the palette written into its `:root` block.
+/// Devuelve [html] con la paleta escrita dentro de su bloque `:root`.
 ///
-/// Throws if the marker is missing: a page served without its custom
-/// properties renders unstyled, and failing at startup beats shipping that to
-/// someone's phone.
+/// Lanza si falta el marcador: una página servida sin sus custom properties se
+/// renderiza sin estilos, y fallar al arrancar es mejor que mandarle eso al
+/// celular de alguien.
 String withPaletteTokens(String html) {
   if (!html.contains(paletteTokenMarker)) {
     throw StateError('assets/web/index.html no contiene $paletteTokenMarker');
@@ -87,11 +90,11 @@ String withPaletteTokens(String html) {
   return html.replaceFirst(paletteTokenMarker, buildCssTokens());
 }
 
-/// Web app manifest for the served page.
+/// El manifest de aplicación web de la página servida.
 ///
-/// Without it, "add to home screen" saves a screenshot of the page as the icon
-/// — which is what the phone showed before this existed. The icon paths are
-/// served by `FileServer.publicAssets`.
+/// Sin él, "añadir a la pantalla de inicio" guarda una captura de la página
+/// como icono, que es lo que mostraba el celular antes de que esto existiera.
+/// Las rutas de los iconos las sirve `FileServer.publicAssets`.
 String buildWebManifest() => jsonEncode({
       'name': 'FileFly',
       'short_name': 'FileFly',

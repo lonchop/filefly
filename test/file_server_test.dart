@@ -56,7 +56,8 @@ void main() {
     final cookie = response.headers.value(HttpHeaders.setCookieHeader)!;
     expect(cookie, contains('filefly_token=$_token'));
     expect(cookie, contains('HttpOnly'));
-    // Must outlive the browser session, or restarting locks the phone out.
+    // Tiene que sobrevivir a la sesión del navegador, o reiniciar deja al
+    // celular fuera.
     expect(cookie, contains('Max-Age='));
   });
 

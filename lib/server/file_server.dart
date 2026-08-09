@@ -21,7 +21,8 @@ FileFly muestra en pantalla.</p>
 </body></html>
 ''';
 
-/// A file kept in the shared folder, as shown to both the app and the phone.
+/// Un archivo guardado en la carpeta compartida, tal como se le muestra tanto a
+/// la app como al celular.
 class SharedFile {
   const SharedFile({required this.name, required this.path, required this.size, required this.modified});
 
@@ -31,8 +32,9 @@ class SharedFile {
   final DateTime modified;
 }
 
-/// The HTTP server the phone talks to. The desktop window is a native client
-/// of the same shared folder, so nothing on screen goes through this.
+/// El servidor HTTP con el que habla el celular. La ventana de escritorio es un
+/// cliente nativo de esa misma carpeta compartida, así que nada de lo que está
+/// en pantalla pasa por aquí.
 class FileServer {
   FileServer({
     required this.indexHtml,
@@ -41,15 +43,15 @@ class FileServer {
     this.publicAssets = const {},
   }) : _sharedDirectory = sharedDirectory;
 
-  /// The page served to phones. Held as a string so this layer stays free of
-  /// Flutter asset plumbing.
+  /// La página que se sirve a los celulares. Se guarda como cadena para que
+  /// esta capa quede libre de la fontanería de assets de Flutter.
   final String indexHtml;
   final String token;
 
-  /// Files served without a token, keyed by request path: the logo and the web
-  /// manifest. They carry no user data, and the browser fetches them outside
-  /// the page's cookie context when installing a home-screen shortcut — gating
-  /// them would only produce a blank icon.
+  /// Archivos que se sirven sin token, indexados por ruta de petición: el logo
+  /// y el manifest web. No llevan datos del usuario, y el navegador los pide
+  /// fuera del contexto de cookie de la página al instalar un acceso directo en
+  /// la pantalla de inicio: protegerlos solo produciría un icono en blanco.
   final Map<String, ({String contentType, List<int> bytes})> publicAssets;
 
   Directory _sharedDirectory;
@@ -58,7 +60,7 @@ class FileServer {
 
   final _changes = StreamController<void>.broadcast();
 
-  /// Fires whenever a phone adds or removes a file.
+  /// Emite cada vez que un celular añade o quita un archivo.
   Stream<void> get changes => _changes.stream;
 
   Directory get sharedDirectory => _sharedDirectory;
@@ -72,7 +74,8 @@ class FileServer {
 
   int? get port => _server?.port;
 
-  /// Full URLs, token included, that a phone can open. The QR encodes the first.
+  /// URLs completas, token incluido, que un celular puede abrir. El QR codifica
+  /// la primera.
   List<String> get shareUrls => _shareUrls;
 
   Future<void> start({int port = 8765}) async {
@@ -112,7 +115,7 @@ class FileServer {
           request.response.statusCode = HttpStatus.internalServerError;
           await request.response.close();
         } catch (_) {
-          // The client hung up mid-response; nothing left to say.
+          // El cliente colgó a mitad de la respuesta; no queda nada que decir.
         }
       }
     }
@@ -130,8 +133,9 @@ class FileServer {
 
     if (request.method == 'GET' && path == '/') {
       if (_tokenInQueryIsValid(query)) {
-        // Park the token in a cookie and bounce to a clean URL, so it stops
-        // sitting in the address bar and the browser history.
+        // Deja el token aparcado en una cookie y rebota a una URL limpia, para
+        // que deje de estar en la barra de direcciones y en el historial del
+        // navegador.
         request.response
           ..statusCode = HttpStatus.found
           ..headers.set(HttpHeaders.locationHeader, '/')
@@ -182,7 +186,7 @@ class FileServer {
     }
   }
 
-  // -- routes ----------------------------------------------------------------
+  // -- rutas -----------------------------------------------------------------
 
   Future<void> _handleUpload(HttpRequest request) async {
     final rawName = request.headers.value('x-filename') ?? 'archivo.bin';
@@ -235,7 +239,8 @@ class FileServer {
     await _sendJson(request, {'ok': true});
   }
 
-  /// Returns an existing file inside the shared folder, or null after replying.
+  /// Devuelve un archivo existente dentro de la carpeta compartida, o null
+  /// después de haber respondido.
   Future<File?> _resolveQueryFile(HttpRequest request, Map<String, String> query) async {
     final name = query['name'];
     if (name == null) {
@@ -251,7 +256,7 @@ class FileServer {
     return file;
   }
 
-  // -- shared folder ---------------------------------------------------------
+  // -- carpeta compartida ----------------------------------------------------
 
   Future<List<SharedFile>> listFiles() async {
     if (!await _sharedDirectory.exists()) return const [];
@@ -271,7 +276,8 @@ class FileServer {
     return files;
   }
 
-  /// Copies a file the desktop user picked into the shared folder.
+  /// Copia a la carpeta compartida un archivo que eligió el usuario de
+  /// escritorio.
   Future<void> addLocalFile(String sourcePath) async {
     final target = uniqueTarget(p.basename(sourcePath));
     await File(sourcePath).copy(target.path);
@@ -299,7 +305,7 @@ class FileServer {
     return target;
   }
 
-  // -- auth ------------------------------------------------------------------
+  // -- autorización ----------------------------------------------------------
 
   bool _tokenInQueryIsValid(Map<String, String> query) =>
       _constantTimeEquals(query['token'] ?? '', token);
@@ -314,7 +320,7 @@ class FileServer {
     return false;
   }
 
-  // -- responses -------------------------------------------------------------
+  // -- respuestas ------------------------------------------------------------
 
   Future<void> _sendHtml(HttpRequest request, String html, {int status = HttpStatus.ok}) async {
     final body = utf8.encode(html);
@@ -327,7 +333,7 @@ class FileServer {
     await request.response.close();
   }
 
-  /// Branding that never changes while the app runs, so it may be cached.
+  /// Marca que no cambia mientras la app corre, así que se puede cachear.
   Future<void> _sendBytes(HttpRequest request, List<int> bytes, String contentType) async {
     request.response
       ..statusCode = HttpStatus.ok
@@ -350,8 +356,8 @@ class FileServer {
   }
 }
 
-/// Reduces any name to a plain file name, so nothing can be written or read
-/// outside the shared folder.
+/// Reduce cualquier nombre a un nombre de archivo plano, para que no se pueda
+/// escribir ni leer fuera de la carpeta compartida.
 String safeFileName(String name) {
   var base = p.basename(name.replaceAll(r'\', '/')).trim();
   base = base.replaceAll(RegExp(r'[\x00-\x1f/:*?"<>|]'), '_');
@@ -359,7 +365,7 @@ String safeFileName(String name) {
   return base;
 }
 
-/// Compares two secrets without leaking their common prefix through timing.
+/// Compara dos secretos sin filtrar por tiempos su prefijo común.
 bool _constantTimeEquals(String a, String b) {
   if (a.length != b.length) return false;
   var diff = 0;

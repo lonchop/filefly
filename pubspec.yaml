@@ -63,14 +63,16 @@ flutter:
 
   assets:
     - assets/web/index.html
-    # 128 is the mark in the window header; 256 and 512 are handed to phones
-    # so "add to home screen" gets the real logo instead of a screenshot.
+    # El de 128 es la marca de la cabecera de la ventana; los de 256 y 512 se
+    # le entregan a los celulares para que "añadir a la pantalla de inicio"
+    # tome el logo de verdad y no una captura.
     - assets/icons/filefly-128.png
     - assets/icons/filefly-256.png
     - assets/icons/filefly-512.png
 
-  # Bundled so the window looks identical on every machine, and so nothing has
-  # to be fetched at runtime — this app never talks to the internet.
+  # Van empaquetadas para que la ventana se vea igual en todas las máquinas y
+  # para que no haya que descargar nada en tiempo de ejecución: esta app nunca
+  # habla con internet.
   fonts:
     - family: Inter
       fonts:

@@ -4,14 +4,15 @@ import 'palette.dart';
 
 export 'palette.dart' show AppColors;
 
-/// Below this window width the two top panels stop sitting side by side.
-/// Picked from the content: the QR plate plus a readable send panel stop
-/// fitting a row somewhere just under 900 logical pixels.
+/// Por debajo de este ancho de ventana los dos paneles de arriba dejan de ir
+/// uno al lado del otro. Sale del contenido: la placa del QR más un panel de
+/// envío legible dejan de entrar en una fila algo por debajo de los 900 píxeles
+/// lógicos.
 const kNarrowWindow = 900.0;
 
-/// Spacing scale. Every gap and pad in the window comes from here, so the
-/// distance inside a group always reads as smaller than the distance between
-/// groups.
+/// Escala de espaciado. Cada hueco y cada relleno de la ventana sale de aquí,
+/// para que la distancia dentro de un grupo se lea siempre como menor que la
+/// distancia entre grupos.
 abstract final class Space {
   static const xs = 4.0;
   static const sm = 8.0;
@@ -21,25 +22,28 @@ abstract final class Space {
   static const xxl = 32.0;
 }
 
-/// Corner radii. Containers are softer than the controls inside them.
+/// Radios de esquina. Los contenedores son más suaves que los controles que
+/// llevan dentro.
 abstract final class Radii {
   static const control = 10.0;
   static const inset = 12.0;
   static const card = 18.0;
 }
 
-/// Duration for every state change in the window. Short enough to feel like
-/// feedback rather than animation.
+/// Duración de cada cambio de estado de la ventana. Lo bastante corta como para
+/// sentirse respuesta y no animación.
 const kMotion = Duration(milliseconds: 140);
 
-/// Inter: a UI face with a tall x-height, so the 12–14px labels this window is
-/// mostly made of stay readable, and unambiguous 1/l/I — the window shows IPs
-/// and tokens. Bundled rather than left to the platform, so Linux and Windows
-/// render the same window.
+/// Inter: una tipografía de interfaz con altura de x grande, para que las
+/// etiquetas de 12 a 14 px de las que está hecha esta ventana sigan siendo
+/// legibles, y con 1/l/I inequívocos, porque la ventana muestra IPs y tokens.
+/// Va empaquetada en vez de dejarla a la plataforma, para que Linux y Windows
+/// rendericen la misma ventana.
 const kSansFamily = 'Inter';
 
-/// JetBrains Mono for paths, URLs and sizes. Its x-height matches Inter's, so
-/// a monospaced path set next to a label doesn't read as smaller.
+/// JetBrains Mono para rutas, URLs y tamaños. Su altura de x coincide con la de
+/// Inter, así que una ruta monoespaciada junto a una etiqueta no se lee más
+/// pequeña.
 const kMonoFamily = 'JetBrainsMono';
 
 ThemeData buildTheme() {
@@ -86,8 +90,9 @@ ThemeData buildTheme() {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.text,
-        // The strong border is what identifies this as a control, so it has to
-        // clear the 3:1 non-text contrast bar on its own.
+        // El borde fuerte es lo que identifica esto como un control, así que
+        // tiene que superar por sí solo el listón de 3:1 de contraste no
+        // textual.
         side: const BorderSide(color: AppColors.borderStrong),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: Space.lg),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.control)),
@@ -112,16 +117,16 @@ ThemeData buildTheme() {
   );
 }
 
-/// The rounded panel every section of the window sits in.
+/// El panel redondeado dentro del que va cada sección de la ventana.
 ///
-/// Elevation here is a hairline border, not a shadow — the window uses one
-/// elevation language throughout.
+/// Aquí la elevación es un filete, no una sombra: la ventana usa un solo
+/// lenguaje de elevación de principio a fin.
 ///
-/// This is the window's only box. Nesting a second bordered, filled rectangle
-/// inside one makes three different things — a drop target, a read-only value,
-/// a list row — render identically, and the window stops having a hierarchy.
-/// Inner regions separate themselves with a hairline or a fill, never with the
-/// full card recipe.
+/// Esta es la única caja de la ventana. Anidar un segundo rectángulo relleno y
+/// con borde dentro de otro hace que tres cosas distintas (una zona de soltar,
+/// un valor de solo lectura, una fila de lista) se rendericen igual, y la
+/// ventana deja de tener jerarquía. Las regiones interiores se separan con un
+/// filete o con un relleno, nunca con la receta completa de la tarjeta.
 class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
@@ -134,9 +139,10 @@ class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
 
-  /// Only for a card that carries a state of its own: the send card tints
-  /// while files are dragged over it. Everything else takes the defaults so
-  /// the window keeps one card treatment.
+  /// Solo para una tarjeta que lleva un estado propio: la tarjeta de envío se
+  /// tiñe mientras se arrastran archivos por encima. Todo lo demás toma los
+  /// valores por defecto, para que la ventana mantenga un único tratamiento de
+  /// tarjeta.
   final Color? color;
   final Color? borderColor;
 
@@ -161,7 +167,7 @@ class SectionTitle extends StatelessWidget {
 
   final String title;
 
-  /// Optional: only when the title alone leaves something unsaid.
+  /// Opcional: solo cuando el título por sí solo deja algo sin decir.
   final String? subtitle;
 
   @override
@@ -182,8 +188,8 @@ class SectionTitle extends StatelessWidget {
   }
 }
 
-/// Monospace style for paths, URLs and sizes. Tabular figures keep the digits
-/// from shifting as a transfer counts up.
+/// Estilo monoespaciado para rutas, URLs y tamaños. Las cifras tabulares evitan
+/// que los dígitos se muevan mientras una transferencia va contando.
 const kMonoStyle = TextStyle(
   fontFamily: kMonoFamily,
   fontSize: 12,

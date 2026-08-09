@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Removes what install_linux.sh created. Leaves the shared folder and the
-# token alone: those are your data, not the app.
+# Quita lo que creó install_linux.sh. No toca la carpeta compartida ni el
+# token: esos son tus datos, no la app.
 set -euo pipefail
 
 PREFIX="${XDG_DATA_HOME:-$HOME/.local/share}"

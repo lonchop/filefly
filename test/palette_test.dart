@@ -6,7 +6,7 @@ import 'package:filefly/app/palette.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// WCAG 2.1 relative luminance.
+/// Luminancia relativa de WCAG 2.1.
 double _luminance(Color color) {
   double channel(int value) {
     final c = value / 255;
@@ -43,8 +43,9 @@ void main() {
     });
 
     test('every custom property the page reads is one the palette emits', () {
-      // This is the guard against the drift that used to exist: two hand-kept
-      // colour lists, one of which quietly fell behind.
+      // Esta es la guarda contra la deriva que existía antes: dos listas de
+      // colores mantenidas a mano, una de las cuales se quedó atrás en
+      // silencio.
       final emitted = {
         for (final pair in buildCssTokens().split(';')) pair.split(':').first,
       };
@@ -54,8 +55,9 @@ void main() {
           .map((m) => m.group(1)!)
           .toSet();
 
-      // Spacing, radii and motion are page-layout concerns declared in the
-      // stylesheet itself, not colours owned by the Dart palette.
+      // El espaciado, los radios y el movimiento son asuntos de layout de la
+      // página, declarados en la propia hoja de estilos, no colores de los que
+      // sea dueña la paleta de Dart.
       final layoutOwned = RegExp(r'^--(s\d|r-|motion|ease-)');
       final colours = used.where((name) => !layoutOwned.hasMatch(name));
 

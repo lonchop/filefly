@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme.dart';
 import '../../server/file_server.dart';
 
-/// The shared folder, as the desktop user sees it.
+/// La carpeta compartida, tal como la ve el usuario de escritorio.
 class SharedFilesPanel extends StatelessWidget {
   const SharedFilesPanel({
     super.key,
@@ -65,8 +65,9 @@ class SharedFilesPanel extends StatelessWidget {
   }
 }
 
-/// Title, folder path and folder controls. The buttons drop under the title
-/// once the card is too narrow to hold both without squeezing the path.
+/// Título, ruta de la carpeta y controles de la carpeta. Los botones caen
+/// debajo del título en cuanto la tarjeta se queda demasiado estrecha para
+/// sostener ambas cosas sin exprimir la ruta.
 class _Head extends StatelessWidget {
   const _Head({
     required this.narrow,
@@ -97,8 +98,9 @@ class _Head extends StatelessWidget {
       ),
     ];
 
-    // The path doubles as the label and the affordance: it says which folder is
-    // shared and opens it, so the card does not need a separate line for each.
+    // La ruta hace de etiqueta y de control a la vez: dice qué carpeta está
+    // compartida y la abre, así que la tarjeta no necesita una línea para cada
+    // cosa.
     final title = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -153,11 +155,12 @@ class _Head extends StatelessWidget {
   }
 }
 
-/// One file in the shared folder.
+/// Un archivo de la carpeta compartida.
 ///
-/// Rows separate with a hairline instead of each being its own filled and
-/// bordered box. A list of those reads as a stack of cards competing with the
-/// panel holding them, and the folder is a list, not a set of cards.
+/// Las filas se separan con un filete en vez de ser cada una su propia caja
+/// rellena y con borde. Una lista de esas se lee como una pila de tarjetas que
+/// compite con el panel que las sostiene, y la carpeta es una lista, no un
+/// conjunto de tarjetas.
 class _FileRow extends StatelessWidget {
   const _FileRow({
     required this.file,
@@ -168,8 +171,8 @@ class _FileRow extends StatelessWidget {
 
   final SharedFile file;
 
-  /// Every row but the first draws the rule above it, so the list never opens
-  /// or closes on a dangling line.
+  /// Todas las filas menos la primera dibujan la línea por encima, para que la
+  /// lista nunca abra ni cierre con una raya suelta.
   final bool divided;
 
   final VoidCallback onOpen;
@@ -202,10 +205,11 @@ class _FileRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: Space.lg),
-          // A labelled button pair repeated down the list gave a destructive
-          // action the same weight as the file name, every row. These stay
-          // muted until pointed at; the tooltip carries the label and delete
-          // still asks for confirmation.
+          // Un par de botones con etiqueta repetido a lo largo de la lista le
+          // daba a una acción destructiva el mismo peso que al nombre del
+          // archivo, en cada fila. Estos se quedan apagados hasta que se les
+          // apunta; el tooltip lleva la etiqueta y eliminar sigue pidiendo
+          // confirmación.
           _RowAction(icon: Icons.open_in_new_rounded, tooltip: 'Abrir', onPressed: onOpen),
           _RowAction(
             icon: Icons.delete_outline_rounded,
@@ -219,7 +223,8 @@ class _FileRow extends StatelessWidget {
   }
 }
 
-/// Icon-only row control. Muted at rest, its colour on hover, focus and press.
+/// Control de fila solo con icono. Apagado en reposo, con su color al pasar por
+/// encima, al recibir el foco y al pulsarlo.
 class _RowAction extends StatelessWidget {
   const _RowAction({
     required this.icon,
@@ -237,8 +242,9 @@ class _RowAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: onPressed,
-      // Carries the accessible name as well as the hover label, so dropping
-      // the visible text does not drop the control's meaning.
+      // Lleva el nombre accesible además de la etiqueta al pasar por encima,
+      // para que quitar el texto visible no se lleve por delante el
+      // significado del control.
       tooltip: tooltip,
       icon: Icon(icon, size: 18),
       padding: EdgeInsets.zero,
@@ -252,10 +258,11 @@ class _RowAction extends StatelessWidget {
           }
           return AppColors.textMuted;
         }),
-        // The muted-to-colour step is too small to be a focus indicator on its
-        // own, and a keyboard user has no pointer to tell them where they are.
-        // Focus gets the same weight as press so tabbing through the list is
-        // as legible as hovering it.
+        // El salto de apagado a color es demasiado pequeño para ser por sí solo
+        // un indicador de foco, y quien usa el teclado no tiene puntero que le
+        // diga dónde está. El foco recibe el mismo peso que la pulsación, para
+        // que recorrer la lista con el tabulador sea tan legible como
+        // recorrerla con el mouse.
         overlayColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.pressed) || states.contains(WidgetState.focused)) {
             return activeColor.withValues(alpha: 0.22);

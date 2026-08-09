@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Installs FileFly for the current user: no root, no system directories.
-# Re-run it after a rebuild to update the installed copy.
+# Instala FileFly para el usuario actual: sin root y sin directorios del
+# sistema. Se vuelve a ejecutar tras recompilar para actualizar la copia
+# instalada.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
@@ -51,8 +52,8 @@ echo "==> Enlace en $BIN_DIR"
 mkdir -p "$BIN_DIR"
 ln -sf "$APP_DIR/filefly" "$BIN_DIR/filefly"
 
-# Menus and icon themes are cached; without this the entry can take a
-# relogin to appear.
+# Los menús y los temas de iconos se cachean; sin esto la entrada puede
+# tardar en aparecer hasta el siguiente inicio de sesión.
 command -v update-desktop-database >/dev/null && \
   update-desktop-database "$PREFIX/applications" || true
 command -v gtk-update-icon-cache >/dev/null && \

@@ -5,14 +5,14 @@ import 'package:filefly/app/theme.dart';
 import 'package:filefly/ui/widgets/connect_panel.dart';
 import 'package:filefly/ui/widgets/send_panel.dart';
 
-/// The wide layout puts the two top panels in one row and closes them on a
-/// single bottom edge.
+/// El layout ancho pone los dos paneles de arriba en una fila y los cierra
+/// sobre un único canto inferior.
 ///
-/// This mirrors `_TopPanels`: an `IntrinsicHeight` supplying the bounded height
-/// that `stretch` needs, inside a scroll view that would otherwise leave the
-/// row unbounded. The pairing is the thing under test — drop either half and
-/// the send card silently falls back to shrink-wrapping its content, which is
-/// the hole this layout exists to close.
+/// Esto refleja `_TopPanels`: un `IntrinsicHeight` que aporta la altura acotada
+/// que `stretch` necesita, dentro de un scroll que si no dejaría la fila sin
+/// acotar. Lo que se prueba es esa pareja: si se quita cualquiera de las dos
+/// mitades, la tarjeta de envío vuelve en silencio a ajustarse a su contenido,
+/// que es justo el hueco que este layout existe para cerrar.
 void main() {
   testWidgets('the send card fills the height of the taller connect card', (tester) async {
     tester.view.physicalSize = const Size(1280, 1400);
@@ -50,8 +50,9 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(send, connect);
 
-    // The connect card is the taller of the two, so a match this size only
-    // happens if the send card actually grew.
+    // La tarjeta de conectar es la más alta de las dos, así que una
+    // coincidencia de este tamaño solo ocurre si la tarjeta de envío creció de
+    // verdad.
     expect(send, greaterThan(400));
   });
 

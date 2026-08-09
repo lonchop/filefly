@@ -13,16 +13,18 @@
        page as the icon instead of the logo. -->
   <link rel="manifest" href="/manifest.webmanifest">
   <style>
-    /* Palette. Injected from lib/app/palette.dart at startup so this page and
-       the desktop window can never drift apart. */
+    /* Paleta. Se inyecta desde lib/app/palette.dart al arrancar, para que esta
+       página y la ventana de escritorio no puedan separarse nunca. */
     :root{/*__FILEFLY_TOKENS__*/}
 
     :root{
-      /* Spacing scale, 4px base. Nothing in this file uses an off-scale gap. */
+      /* Escala de espaciado, base de 4px. Nada en este archivo usa un hueco
+         fuera de escala. */
       --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
-      /* Corner radii: containers softer than the controls inside them. */
+      /* Radios de esquina: los contenedores más suaves que los controles que
+         llevan dentro. */
       --r-control:10px; --r-inset:12px; --r-card:18px;
-      /* Motion. Entering uses ease-out, leaving uses ease-in. */
+      /* Movimiento. Al entrar se usa ease-out, al salir ease-in. */
       --motion:140ms;
       --ease-out:cubic-bezier(.22,.61,.36,1);
     }
@@ -40,13 +42,13 @@
       line-height:1.5;
       color:var(--text);
       background:var(--ink);
-      /* Keeps content clear of the notch and the home indicator. */
+      /* Mantiene el contenido lejos del notch y del indicador de inicio. */
       padding-left:max(var(--s4),env(safe-area-inset-left));
       padding-right:max(var(--s4),env(safe-area-inset-right));
       padding-bottom:max(var(--s5),env(safe-area-inset-bottom));
     }
 
-    /* -- type scale ------------------------------------------------------- */
+    /* -- escala tipográfica ------------------------------------------------ */
 
     h1{
       margin:0;
@@ -59,10 +61,11 @@
     p{margin:0}
     .muted{color:var(--text-muted)}
     .lede{max-width:60ch;text-wrap:pretty}
-    /* Sizes, percentages and byte counts stop jittering as they update. */
+    /* Los tamaños, los porcentajes y los bytes dejan de bailar al actualizarse. */
     .tnum{font-variant-numeric:tabular-nums}
 
-    /* Keyboard users get the same ring everywhere, and only they see it. */
+    /* Quien usa el teclado recibe el mismo anillo en todas partes, y solo lo ve
+       esa persona. */
     :focus-visible{
       outline:2px solid var(--accent);
       outline-offset:2px;
@@ -77,7 +80,7 @@
     }
     .skip:focus-visible{top:var(--s4)}
 
-    /* -- layout ----------------------------------------------------------- */
+    /* -- disposición -------------------------------------------------------- */
 
     .wrap{width:min(1080px,100%);margin:auto}
 
@@ -85,18 +88,20 @@
       display:flex;align-items:flex-start;justify-content:space-between;
       gap:var(--s4);margin:var(--s2) 0 var(--s6);
     }
-    /* The wordmark sits beside the logo; the description runs the full width
-       under both, so it never gets squeezed into a narrow column on a phone. */
+    /* El logotipo va al lado de la marca; la descripción ocupa todo el ancho
+       por debajo de los dos, para que en un celular nunca quede exprimida en
+       una columna estrecha. */
     .brandCol{display:flex;flex-direction:column;gap:var(--s2);min-width:0}
     .brand{display:flex;align-items:center;gap:var(--s3)}
     .mark{width:56px;height:56px;flex-shrink:0}
 
-    /* Status badge and the install button share the right edge of the header. */
+    /* La insignia de estado y el botón de instalar comparten el canto derecho
+       de la cabecera. */
     .headEnd{display:flex;flex-direction:column;align-items:flex-end;gap:var(--s2);flex-shrink:0}
 
-    /* Shown only when the browser cannot offer a real install prompt, which is
-       the common case here: a service worker needs a secure context and this
-       page is plain HTTP over the LAN. */
+    /* Solo se muestra cuando el navegador no puede ofrecer un aviso de
+       instalación de verdad, que es el caso habitual aquí: un service worker
+       necesita un contexto seguro y esta página es HTTP plano sobre la LAN. */
     .installHint{
       margin:calc(var(--s5) * -1) 0 var(--s6);
       color:var(--text-muted);font-size:13px;text-wrap:pretty;
@@ -108,12 +113,14 @@
       background:var(--surface);border:1px solid var(--border);
       color:var(--text-muted);font-size:13px;white-space:nowrap;flex-shrink:0;
     }
-    /* Flat dot. Status is read from the label next to it, not from a glow. */
+    /* Punto plano. El estado se lee de la etiqueta que tiene al lado, no de un
+       halo. */
     .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
     .badge[data-offline] .dot{background:var(--danger)}
 
-    /* Explicit placement, because the DOM order is the phone order (send,
-       files, connect) and auto-placement would leave column 2 empty. */
+    /* Colocación explícita, porque el orden del DOM es el orden del celular
+       (enviar, archivos, conectar) y la colocación automática dejaría vacía la
+       columna 2. */
     .grid{display:grid;grid-template-columns:1.25fr .75fr;gap:var(--s4)}
     /* Sin stretch, la tarjeta de conectar es la alta y la de enviar dejaba un
        hueco debajo. La misma razón por la que la ventana usa IntrinsicHeight. */
@@ -126,7 +133,7 @@
       padding:var(--s5);background:var(--surface);
     }
 
-    /* -- drop zone -------------------------------------------------------- */
+    /* -- zona de soltar ----------------------------------------------------- */
 
     .drop{
       flex:1;min-height:240px;margin-top:var(--s5);padding:var(--s5);
@@ -142,7 +149,7 @@
     .drop strong{font-size:16px}
     .drop .button{margin-top:var(--s3)}
 
-    /* -- controls --------------------------------------------------------- */
+    /* -- controles ---------------------------------------------------------- */
 
     button,.button{
       border:1px solid transparent;border-radius:var(--r-control);
@@ -165,7 +172,8 @@
 
     .danger{background:transparent;border-color:var(--border-strong);color:var(--danger)}
     .danger:hover:not(:disabled){border-color:var(--danger)}
-    /* Second press of a delete button, once it is asking for confirmation. */
+    /* Segunda pulsación de un botón de eliminar, cuando ya está pidiendo
+       confirmación. */
     .danger.arming{border-color:var(--danger);color:var(--danger)}
 
     input[type=file]{
@@ -176,7 +184,8 @@
     /* -- QR --------------------------------------------------------------- */
 
     .qrWrap{display:flex;justify-content:center;margin:var(--s5) 0 var(--s3)}
-    /* Stays pure white on purpose: scanners need the quiet zone to be white. */
+    /* Se queda en blanco puro a propósito: los escáneres necesitan que la zona
+       de silencio sea blanca. */
     .qrCard{background:#fff;padding:var(--s3);border-radius:var(--r-inset);line-height:0}
     #qrCanvas{display:block;width:min(260px,64vw);height:auto;image-rendering:pixelated}
     .qrLabel{text-align:center;color:var(--text-muted);font-size:13px;text-wrap:balance}
@@ -192,7 +201,7 @@
     .copyRow{display:flex;gap:var(--s2);margin-top:var(--s3)}
     .copyRow>*{flex:1}
 
-    /* -- progress --------------------------------------------------------- */
+    /* -- progreso ----------------------------------------------------------- */
 
     .progressBox{display:none;margin-top:var(--s5)}
     .progressBox[data-active]{display:block}
@@ -211,7 +220,7 @@
     .status.ok{color:var(--accent)}
     .status.err{color:var(--danger)}
 
-    /* -- file list -------------------------------------------------------- */
+    /* -- lista de archivos -------------------------------------------------- */
 
     .filesHead{
       display:flex;justify-content:space-between;gap:var(--s3);
@@ -229,8 +238,8 @@
     .actions{display:flex;gap:var(--s2)}
     .empty{text-align:center;color:var(--text-muted);padding:var(--s6) var(--s4);text-wrap:balance}
 
-    /* Skeleton rows match the shape of a real file row, so the list does not
-       jump when the first fetch lands. */
+    /* Las filas fantasma copian la forma de una fila de archivo real, para que
+       la lista no dé un salto cuando llega la primera petición. */
     .skeleton{height:66px;border-radius:var(--r-inset);background:var(--surface-muted);
       border:1px solid var(--border);animation:pulse 1.4s ease-in-out infinite}
     .skeleton:nth-child(2){animation-delay:.15s}
@@ -242,10 +251,10 @@
       color:var(--text-muted);font-size:12px;text-wrap:balance;
     }
 
-    /* -- narrow screens ---------------------------------------------------- */
+    /* -- pantallas estrechas ------------------------------------------------- */
 
-    /* One column. On a phone the QR is the least useful card — you are already
-       connected — so it drops below the files list. */
+    /* Una columna. En un celular el QR es la tarjeta menos útil, porque ya
+       estás conectado, así que cae por debajo de la lista de archivos. */
     @media(max-width:900px){
       .grid{grid-template-columns:1fr}
       .sendCard,.connectCard,.filesCard{grid-column:auto;grid-row:auto}
@@ -263,7 +272,8 @@
       .arrow{font-size:32px}
       .filesHead{flex-direction:column}
       .filesHead>button{width:100%}
-      /* Name over actions, and the actions split the row evenly. */
+      /* El nombre encima de las acciones, y las acciones se reparten la fila
+         por igual. */
       .file{grid-template-columns:1fr}
       .actions>*{flex:1}
     }
@@ -1815,9 +1825,9 @@ module.exports = QRCode;
       dl.textContent = "Descargar";
       dl.href = api("/api/download?name=" + encodeURIComponent(f.name));
 
-      // Two presses instead of confirm(): a modal dialog blocks the page and
-      // reads badly on a phone. The button asks for itself and disarms after
-      // a few seconds if the second press never comes.
+      // Dos pulsaciones en vez de confirm(): un diálogo modal bloquea la
+      // página y se lee mal en un celular. El botón se pregunta a sí mismo y se
+      // desarma a los pocos segundos si la segunda pulsación no llega.
       const del = document.createElement("button");
       del.className = "danger";
       del.type = "button";
@@ -1943,8 +1953,9 @@ module.exports = QRCode;
       els.copy.textContent = "Enlace copiado";
       setTimeout(() => els.copy.textContent = "Copiar enlace", 1600);
     }catch{
-      // The clipboard API needs a secure context, and this page is plain HTTP
-      // over the LAN. Select the address so a long press can copy it by hand.
+      // La API del portapapeles necesita un contexto seguro, y esta página es
+      // HTTP plano sobre la LAN. Se selecciona la dirección para que una
+      // pulsación larga pueda copiarla a mano.
       const first = els.addresses.firstElementChild;
       if (first){
         const range = document.createRange();
@@ -1957,13 +1968,13 @@ module.exports = QRCode;
     }
   });
 
-  // -- install ---------------------------------------------------------------
+  // -- instalación -------------------------------------------------------------
   //
-  // Chrome only fires beforeinstallprompt for a page with a service worker, and
-  // a service worker needs a secure context — which http://<lan-ip> is not. So
-  // the one-tap install is a bonus, and the fallback is the manual "add to home
-  // screen" route, which does honour the manifest and gives the same icon and
-  // standalone window.
+  // Chrome solo dispara beforeinstallprompt en una página con service worker, y
+  // un service worker necesita un contexto seguro, que http://<ip-lan> no es.
+  // Así que la instalación de un toque es un extra, y el plan B es la ruta
+  // manual de "añadir a la pantalla de inicio", que sí respeta el manifest y da
+  // el mismo icono y la misma ventana independiente.
   {
     const installed = matchMedia("(display-mode: standalone)").matches ||
       navigator.standalone === true;

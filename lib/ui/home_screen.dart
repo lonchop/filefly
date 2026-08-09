@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (server == null) return;
 
     for (final path in paths) {
-      if (FileSystemEntity.isDirectorySync(path)) continue; // folders are not shared
+      if (FileSystemEntity.isDirectorySync(path)) continue; // las carpetas no se comparten
       await server.addLocalFile(path);
     }
     await _refresh();
@@ -94,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await _refresh();
   }
 
-  /// Hands a path to the desktop environment; there is no Dart API for this.
+  /// Le pasa una ruta al entorno de escritorio; no hay API de Dart para esto.
   Future<void> _openInDesktop(String path) async {
     final command = Platform.isWindows ? 'explorer' : 'xdg-open';
     await Process.run(command, [path]);
@@ -129,8 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final server = _server;
 
-    // Measured on the window, not on the content box, so the breakpoint means
-    // what it says.
+    // Se mide sobre la ventana, no sobre la caja de contenido, para que el
+    // punto de quiebre signifique lo que dice.
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
@@ -191,9 +191,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// Send and connect sit side by side while there is room, and stack once the
-/// window gets too narrow for the QR plate and a readable drop zone to share
-/// a row.
+/// Enviar y conectar van uno al lado del otro mientras hay sitio, y se apilan
+/// en cuanto la ventana se queda demasiado estrecha para que la placa del QR y
+/// una zona de soltar legible compartan fila.
 class _TopPanels extends StatelessWidget {
   const _TopPanels({required this.narrow, required this.send, required this.connect});
 
@@ -209,20 +209,22 @@ class _TopPanels extends StatelessWidget {
       );
     }
 
-    // Both cards share the height of the taller one, so the row closes on a
-    // single line. Letting each end at its own content left the send card
-    // stopping short of the QR card, and since the window background sits one
-    // step from the card fill, that gap became the largest empty shape on
-    // screen — a rendering fault, not a composition.
+    // Las dos tarjetas comparten la altura de la más alta, para que la fila
+    // cierre en una sola línea. Dejar que cada una terminara en su propio
+    // contenido hacía que la tarjeta de envío se quedara corta frente a la del
+    // QR y, como el fondo de la ventana está a un paso del relleno de la
+    // tarjeta, ese hueco pasaba a ser la forma vacía más grande de la pantalla:
+    // parecía un fallo de renderizado, no una composición.
     //
-    // The send card is what absorbs the difference: its drop zone grows into
-    // the extra height, which is the right way round. A bigger drop target is
-    // a better drop target, and it is the card that should dominate the row.
+    // La tarjeta de envío es la que absorbe la diferencia: su zona de soltar
+    // crece hacia la altura sobrante, que es el sentido correcto. Un blanco de
+    // soltar más grande es un blanco mejor, y es la tarjeta que debe dominar la
+    // fila.
     //
-    // IntrinsicHeight is what gives `stretch` a bounded height to work with:
-    // this row lives in a scroll view, so its own height is unbounded. The QR
-    // card can answer the intrinsic query because its plate is a tight
-    // SizedBox; see connect_panel.dart.
+    // IntrinsicHeight es lo que le da a `stretch` una altura acotada con la que
+    // trabajar: esta fila vive dentro de un scroll, así que su propia altura no
+    // está acotada. La tarjeta del QR puede responder a la consulta intrínseca
+    // porque su placa es un SizedBox ajustado; ver connect_panel.dart.
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -244,8 +246,9 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The wordmark sits beside the logo; the description runs the full width
-    // under both, so a narrow window never squeezes it into a thin column.
+    // El logotipo va al lado de la marca; la descripción ocupa todo el ancho
+    // por debajo de los dos, para que una ventana estrecha nunca la exprima
+    // hasta dejarla en una columna fina.
     final title = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -316,8 +319,8 @@ class _StatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Flat dot. The label beside it is what states the status; the dot
-          // does not need a glow to say it twice.
+          // Punto plano. La etiqueta que tiene al lado es la que enuncia el
+          // estado; el punto no necesita un halo para decirlo dos veces.
           Container(
             width: 8,
             height: 8,
@@ -327,7 +330,10 @@ class _StatusBadge extends StatelessWidget {
             ),
           ),
           const SizedBox(width: Space.sm + 2),
-          Text(running ? 'Activo' : 'Detenido', style: const TextStyle(fontSize: 13)),
+          // Las mismas dos etiquetas que la página del celular. Que cada
+          // superficie llamara al mismo estado de forma distinta obligaba a
+          // traducir entre pantalla y pantalla.
+          Text(running ? 'Conectado' : 'Sin conexión', style: const TextStyle(fontSize: 13)),
         ],
       ),
     );

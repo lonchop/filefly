@@ -4,7 +4,8 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../app/theme.dart';
 
-/// QR code and pairing link — how a phone gets in without installing anything.
+/// Código QR y enlace de emparejamiento: por dónde entra un celular sin
+/// instalar nada.
 class ConnectPanel extends StatelessWidget {
   const ConnectPanel({super.key, required this.shareUrls});
 
@@ -25,23 +26,24 @@ class ConnectPanel extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(Space.md),
                 decoration: BoxDecoration(
-                  // Stays pure white on purpose: a scanner needs the quiet
-                  // zone around the code to be white.
+                  // Se queda en blanco puro a propósito: un escáner necesita
+                  // que la zona de silencio alrededor del código sea blanca.
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(Radii.inset),
                 ),
-                // The tight box is load-bearing: QrImageView measures itself
-                // with a LayoutBuilder, and the row above asks this card for
-                // its intrinsic height. A tight height answers that without
-                // reaching into the builder, which cannot report one.
+                // La caja ajustada sostiene el layout: QrImageView se mide con
+                // un LayoutBuilder, y la fila de arriba le pide a esta tarjeta
+                // su altura intrínseca. Una altura ajustada responde a esa
+                // consulta sin entrar en el builder, que no sabe darla.
                 child: SizedBox.square(
                   dimension: 220,
                   child: QrImageView(
                     data: shareUrls.first,
                     size: 220,
                     backgroundColor: Colors.white,
-                    // A URL with a 32-char token needs the density; low
-                    // correction keeps the modules big enough to scan.
+                    // Una URL con un token de 32 caracteres necesita la
+                    // densidad; una corrección baja mantiene los módulos lo
+                    // bastante grandes como para escanearlos.
                     errorCorrectionLevel: QrErrorCorrectLevel.L,
                   ),
                 ),
@@ -54,22 +56,9 @@ class ConnectPanel extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             for (final url in shareUrls) _UrlBox(url: url),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () => _copy(context, shareUrls.first),
-              icon: const Icon(Icons.copy_rounded, size: 18),
-              label: const Text('Copiar enlace'),
-            ),
           ],
         ],
       ),
-    );
-  }
-
-  void _copy(BuildContext context, String url) {
-    Clipboard.setData(ClipboardData(text: url));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Enlace copiado')),
     );
   }
 }
@@ -81,21 +70,47 @@ class _UrlBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Fill, no border. This is a value to read and copy, not a control, and
-    // giving it the same edge as the card around it was one more rectangle
-    // saying nothing.
+    // Relleno, sin borde. Esto es un valor para leer y copiar, no un control, y
+    // darle el mismo canto que la tarjeta que lo rodea era un rectángulo más
+    // sin decir nada.
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: Space.sm),
-      padding: const EdgeInsets.symmetric(horizontal: Space.md, vertical: Space.md),
+      padding: const EdgeInsets.fromLTRB(Space.md, Space.sm, Space.sm, Space.sm),
       decoration: BoxDecoration(
         color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(Radii.inset),
       ),
-      child: SelectableText(
-        url,
-        style: kMonoStyle,
+      child: Row(
+        children: [
+          Expanded(
+            child: SelectableText(
+              url,
+              style: kMonoStyle,
+            ),
+          ),
+          const SizedBox(width: Space.sm),
+          // La acción vive junto al valor que copia: un botón con etiqueta
+          // debajo repetía lo que la caja ya dice.
+          IconButton(
+            onPressed: () => _copy(context),
+            tooltip: 'Copiar enlace',
+            icon: const Icon(Icons.copy_rounded, size: 18),
+            color: AppColors.textMuted,
+            // La caja mide 18px de alto de texto: el objetivo por defecto de
+            // 40px la estiraría. 32px sigue siendo cómodo con mouse.
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+          ),
+        ],
       ),
+    );
+  }
+
+  void _copy(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: url));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Enlace copiado')),
     );
   }
 }
