@@ -68,7 +68,9 @@ reports a change.
 ```
 lib/
   main.dart                  # loads the phone page asset, starts the app
-  app/theme.dart             # palette shared with the page served to phones
+  app/palette.dart           # the only place a hex lives; injected into the
+                             #   phone page's :root so the two cannot drift
+  app/theme.dart             # ThemeData, spacing scale, shared widgets
   server/
     file_server.dart         # HTTP server, routes, auth, shared folder
     lan_addresses.dart       # which IPs a phone can actually reach
