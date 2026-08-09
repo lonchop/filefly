@@ -1,3 +1,93 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+```bash
+flutter pub get
+flutter analyze                     # must be clean; CI fails on any issue
+flutter test                        # full suite
+flutter test test/palette_test.dart # one file
+flutter test --plain-name 'the served page carries the marker and gets it replaced'
+flutter run -d linux                # dev run
+flutter build linux --release && tool/install_linux.sh   # user-level install, no root
+```
+
+`tool/install_linux.sh` installs into `~/.local/share/filefly`, registers the
+`.desktop` entry and the hicolor icons, and links `~/.local/bin/filefly`. Re-run
+build + install after changing code. `tool/uninstall_linux.sh` removes it and
+leaves the shared folder and the token alone.
+
+Windows is built by `.github/workflows/windows.yml` (Flutter pinned to 3.38.5,
+analyze → test → build → Inno Setup installer). A `v*` tag publishes a release.
+
+Only one instance can run: the server holds port 8765. If a run fails to start,
+another FileFly is already up.
+
+## Architecture
+
+The desktop window and the phone browser are **two clients of the same folder**.
+The window never goes through HTTP — it reads and writes the shared directory
+directly and repaints when `FileServer.changes` emits.
+
+```
+main.dart          loads assets/web/index.html, injects the palette, boots the app
+ui/home_screen.dart owns the FileServer instance, the file list and the layout
+server/file_server.dart  dart:io HttpServer, routes, auth, shared folder
+server/lan_addresses.dart which IPs a phone can actually reach
+server/app_paths.dart     token + shared_dir pointer, per platform convention
+app/palette.dart          the only place a hex lives; also the CSS token source
+app/theme.dart            ThemeData, Space/Radii/kMotion, AppCard, SectionTitle
+assets/web/index.html     the phone page, ~2000 lines, self-contained (QR encoder inline)
+```
+
+Three facts that are not obvious from any single file:
+
+**The palette crosses the language boundary at startup.** `main()` calls
+`withPaletteTokens()` on the asset string before handing it to `FileServer`,
+replacing the `/*__FILEFLY_TOKENS__*/` marker inside `:root` with the hexes from
+`AppColors`. The server layer never touches Flutter's asset bundle; it receives
+a plain string. `palette_test.dart` asserts every `var(--color)` the page reads
+is one `buildCssTokens()` emits.
+
+**Auth is token → cookie, and the token is persistent.** `app_paths.loadToken()`
+reads or creates a 32-hex-char token in the platform config dir, mode 600, and
+reuses it across runs. A first visit to `/?token=…` sets an `HttpOnly`,
+`SameSite=Lax`, 30-day cookie and redirects to a clean `/`. Rotating the token
+per launch would invalidate the QR, the bookmarked link and every paired phone's
+cookie at once — `loadToken(rotate: true)` is the deliberate lock-everyone-out
+path. Comparison is constant-time.
+
+Three paths are served without a token — `/manifest.webmanifest`,
+`/icon-256.png`, `/icon-512.png` (`FileServer.publicAssets`, built in `main()`).
+The browser fetches them outside the page's cookie context during "add to home
+screen"; gating them yields a blank icon.
+
+**Every file name is reduced by `safeFileName()`** before it touches the
+filesystem, on upload, download and delete alike. That is the whole path
+traversal defense. `uniqueTarget()` then resolves collisions as `name (1).ext`.
+
+**Reachable IPs are filtered, not detected.** `lan_addresses.dart` walks
+`NetworkInterface.list()`, drops virtual interfaces by name regex (VPN tunnels,
+container bridges, hypervisor adapters) and prefers RFC1918 addresses. A VPN
+address in the QR produces a code no phone can open — this is why the filter
+exists, not a nicety.
+
+Known limits, stated in the README and deliberate: plain HTTP with no TLS, a
+long-lived token, and uncapped upload size.
+
+## Tests
+
+- `file_server_test.dart` — binds on port 0, exercises the token/cookie
+  handshake, stale cookies, upload, name collisions, download, delete, traversal.
+- `palette_test.dart` — palette injection, the CSS-var/token match, WCAG AA
+  contrast for every foreground/surface pair, manifest icons.
+- `layout_test.dart` — the `IntrinsicHeight` + `stretch` pairing in the wide
+  layout; drop either half and the send card silently shrink-wraps.
+
+---
+
 # FileFly — design directive
 
 FileFly moves files between a desktop and a phone over the LAN. It renders **two
