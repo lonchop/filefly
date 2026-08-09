@@ -19,6 +19,10 @@ AppPublisher=Orangel Jose Gonzalez
 DefaultDirName={autopf}\FileFly
 DefaultGroupName=FileFly
 UninstallDisplayIcon={app}\filefly.exe
+; El mismo .ico que Runner.rc compila dentro de filefly.exe. Sin esta línea el
+; instalador sale con el ícono por defecto de Inno Setup, que es lo primero que
+; ve quien descarga el release.
+SetupIconFile=..\runner\resources\app_icon.ico
 OutputDir=..\..\build\installer
 OutputBaseFilename=FileFly-{#AppVersion}-windows-x64-setup
 Compression=lzma2/max
