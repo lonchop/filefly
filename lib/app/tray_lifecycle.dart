@@ -17,7 +17,11 @@ class TrayLifecycle with WindowListener, TrayListener {
   Future<void> start() async {
     try {
       await _setUpTray();
-    } on Exception {
+    } on Exception catch (err) {
+      // Sin bandeja no hay vuelta atrás, así que la X vuelve a cerrar de
+      // verdad. Se avisa por stderr: un catch mudo aquí esconde justo el
+      // fallo que deja la app sin forma de volver.
+      stderr.writeln('FileFly: no se pudo registrar la bandeja: $err');
       return;
     }
     trayManager.addListener(this);
@@ -51,7 +55,12 @@ class TrayLifecycle with WindowListener, TrayListener {
     await trayManager.setIcon(
       Platform.isWindows ? 'assets/icons/filefly.ico' : 'assets/icons/filefly-32.png',
     );
-    await trayManager.setToolTip('FileFly');
+    // El plugin de Linux solo implementa destroy, setIcon, setTitle y
+    // setContextMenu: pedirle el tooltip lanza MissingPluginException y deja
+    // la bandeja a medio montar.
+    if (Platform.isWindows) {
+      await trayManager.setToolTip('FileFly');
+    }
     await trayManager.setContextMenu(Menu(items: [
       MenuItem(key: _showKey, label: 'Abrir FileFly'),
       MenuItem.separator(),
