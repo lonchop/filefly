@@ -3,201 +3,360 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b1020">
+  <meta name="theme-color" content="#080e15">
+  <meta name="description" content="Transfiere archivos entre tu celular y tu PC por la red local, sin cable y sin nube.">
+  <meta name="robots" content="noindex, nofollow">
   <title>FileFly</title>
+  <link rel="icon" type="image/png" href="/icon-256.png">
+  <link rel="apple-touch-icon" href="/icon-256.png">
+  <!-- Without a manifest, "add to home screen" saves a screenshot of the
+       page as the icon instead of the logo. -->
+  <link rel="manifest" href="/manifest.webmanifest">
   <style>
+    /* Palette. Injected from lib/app/palette.dart at startup so this page and
+       the desktop window can never drift apart. */
+    :root{/*__FILEFLY_TOKENS__*/}
+
     :root{
-      --bg:#0b1020;
-      --panel:#121a2d;
-      --panel2:#18243a;
-      --text:#f2f6ff;
-      --muted:#99a8bf;
-      --accent:#78e6bc;
-      --accent2:#70a8ff;
-      --danger:#ff8497;
-      --line:rgba(255,255,255,.09);
-      --shadow:0 22px 70px rgba(0,0,0,.36);
+      /* Spacing scale, 4px base. Nothing in this file uses an off-scale gap. */
+      --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+      /* Corner radii: containers softer than the controls inside them. */
+      --r-control:10px; --r-inset:12px; --r-card:18px;
+      /* Motion. Entering uses ease-out, leaving uses ease-in. */
+      --motion:140ms;
+      --ease-out:cubic-bezier(.22,.61,.36,1);
     }
+
     *{box-sizing:border-box}
+
+    html{-webkit-text-size-adjust:100%}
+
     body{
-      margin:0;min-height:100vh;padding:24px;
-      font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      margin:0;
+      min-height:100dvh;
+      padding:var(--s5) var(--s4);
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+      font-size:15px;
+      line-height:1.5;
       color:var(--text);
-      background:
-        radial-gradient(circle at 15% 0,rgba(112,168,255,.18),transparent 32%),
-        radial-gradient(circle at 90% 90%,rgba(120,230,188,.12),transparent 34%),
-        var(--bg);
+      background:var(--ink);
+      /* Keeps content clear of the notch and the home indicator. */
+      padding-left:max(var(--s4),env(safe-area-inset-left));
+      padding-right:max(var(--s4),env(safe-area-inset-right));
+      padding-bottom:max(var(--s5),env(safe-area-inset-bottom));
     }
-    .wrap{width:min(1050px,100%);margin:auto}
+
+    /* -- type scale ------------------------------------------------------- */
+
+    h1{
+      margin:0;
+      font-size:clamp(30px,6vw,44px);
+      font-weight:800;
+      letter-spacing:-.03em;
+      line-height:1.05;
+    }
+    h2{margin:0 0 var(--s1);font-size:18px;font-weight:700;letter-spacing:-.01em}
+    p{margin:0}
+    .muted{color:var(--text-muted)}
+    .lede{max-width:60ch;text-wrap:pretty}
+    /* Sizes, percentages and byte counts stop jittering as they update. */
+    .tnum{font-variant-numeric:tabular-nums}
+
+    /* Keyboard users get the same ring everywhere, and only they see it. */
+    :focus-visible{
+      outline:2px solid var(--accent);
+      outline-offset:2px;
+      border-radius:var(--r-control);
+    }
+
+    .skip{
+      position:absolute;left:var(--s4);top:calc(var(--s4) * -4);
+      padding:var(--s2) var(--s3);border-radius:var(--r-control);
+      background:var(--accent);color:var(--accent-ink);font-weight:600;
+      text-decoration:none;transition:top var(--motion) var(--ease-out);
+    }
+    .skip:focus-visible{top:var(--s4)}
+
+    /* -- layout ----------------------------------------------------------- */
+
+    .wrap{width:min(1080px,100%);margin:auto}
+
     header{
       display:flex;align-items:flex-start;justify-content:space-between;
-      gap:18px;margin:8px 0 22px;
+      gap:var(--s4);margin:var(--s2) 0 var(--s6);
     }
-    h1{margin:0;font-size:clamp(32px,7vw,52px);letter-spacing:-2px}
-    h2{margin:0 0 8px;font-size:20px}
-    p{margin:0}
-    .muted{color:var(--muted)}
+    /* The wordmark sits beside the logo; the description runs the full width
+       under both, so it never gets squeezed into a narrow column on a phone. */
+    .brandCol{display:flex;flex-direction:column;gap:var(--s2);min-width:0}
+    .brand{display:flex;align-items:center;gap:var(--s3)}
+    .mark{width:56px;height:56px;flex-shrink:0}
+
+    /* Status badge and the install button share the right edge of the header. */
+    .headEnd{display:flex;flex-direction:column;align-items:flex-end;gap:var(--s2);flex-shrink:0}
+
+    /* Shown only when the browser cannot offer a real install prompt, which is
+       the common case here: a service worker needs a secure context and this
+       page is plain HTTP over the LAN. */
+    .installHint{
+      margin:calc(var(--s5) * -1) 0 var(--s6);
+      color:var(--text-muted);font-size:13px;text-wrap:pretty;
+    }
+
     .badge{
-      display:flex;align-items:center;gap:9px;padding:10px 14px;
-      border-radius:999px;background:rgba(255,255,255,.04);
-      border:1px solid var(--line);color:var(--muted);white-space:nowrap
+      display:flex;align-items:center;gap:var(--s2);
+      padding:var(--s2) var(--s3);border-radius:999px;
+      background:var(--surface);border:1px solid var(--border);
+      color:var(--text-muted);font-size:13px;white-space:nowrap;flex-shrink:0;
     }
-    .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 16px var(--accent)}
-    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
+    /* Flat dot. Status is read from the label next to it, not from a glow. */
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+    /* Explicit placement, because the DOM order is the phone order (send,
+       files, connect) and auto-placement would leave column 2 empty. */
+    .grid{display:grid;grid-template-columns:1.25fr .75fr;gap:var(--s4);align-items:start}
+    .sendCard{grid-column:1;grid-row:1}
+    .connectCard{grid-column:2;grid-row:1}
+    .filesCard{grid-column:1/-1;grid-row:2}
+
     .card{
-      border:1px solid var(--line);border-radius:24px;padding:22px;
-      background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02));
-      box-shadow:var(--shadow);backdrop-filter:blur(12px)
+      border:1px solid var(--border);border-radius:var(--r-card);
+      padding:var(--s5);background:var(--surface);
     }
+
+    /* -- drop zone -------------------------------------------------------- */
+
     .drop{
-      min-height:260px;margin-top:18px;padding:28px;
-      display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;
-      border:1.5px dashed rgba(120,230,188,.45);border-radius:20px;
-      background:rgba(120,230,188,.035);transition:.15s ease
+      min-height:240px;margin-top:var(--s5);padding:var(--s5);
+      display:flex;flex-direction:column;justify-content:center;align-items:center;
+      text-align:center;gap:var(--s2);
+      border:1.5px dashed var(--border-strong);border-radius:var(--r-inset);
+      background:var(--surface-muted);
+      transition:border-color var(--motion) var(--ease-out),
+                 background-color var(--motion) var(--ease-out);
     }
-    .drop.drag{background:rgba(120,230,188,.10);transform:scale(1.01);border-color:var(--accent)}
-    .arrow{font-size:54px;line-height:1;margin-bottom:10px}
+    .drop.drag{border-color:var(--accent);background:var(--accent-deep)}
+    .arrow{font-size:40px;line-height:1;color:var(--text-muted)}
+    .drop strong{font-size:16px}
+    .drop .button{margin-top:var(--s3)}
+
+    /* -- controls --------------------------------------------------------- */
+
     button,.button{
-      border:0;border-radius:14px;padding:12px 16px;cursor:pointer;
-      font-weight:750;font-size:14px;text-decoration:none;transition:.14s ease;
-      display:inline-flex;justify-content:center;align-items:center
+      border:1px solid transparent;border-radius:var(--r-control);
+      padding:var(--s3) var(--s4);cursor:pointer;
+      font:inherit;font-weight:600;font-size:14px;
+      text-decoration:none;display:inline-flex;align-items:center;
+      justify-content:center;min-height:44px;
+      transition:background-color var(--motion) var(--ease-out),
+                 border-color var(--motion) var(--ease-out),
+                 transform var(--motion) var(--ease-out);
     }
-    button:hover,.button:hover{transform:translateY(-1px)}
-    .primary{background:linear-gradient(135deg,var(--accent),#39d69c);color:#062016}
-    .secondary{background:rgba(255,255,255,.055);border:1px solid var(--line);color:var(--text)}
-    .danger{background:rgba(255,132,151,.11);border:1px solid rgba(255,132,151,.25);color:#ffd0d7}
-    input[type=file]{display:none}
-    .qrWrap{
-      display:flex;justify-content:center;align-items:center;
-      margin:18px 0 10px;
+    button:active,.button:active{transform:translateY(1px)}
+    button:disabled{cursor:not-allowed;opacity:.5;transform:none}
+
+    .primary{background:var(--accent);color:var(--accent-ink)}
+    .primary:hover:not(:disabled){background:var(--accent-strong)}
+
+    .secondary{background:transparent;border-color:var(--border-strong);color:var(--text)}
+    .secondary:hover:not(:disabled){background:var(--surface-muted);border-color:var(--accent)}
+
+    .danger{background:transparent;border-color:var(--border-strong);color:var(--danger)}
+    .danger:hover:not(:disabled){border-color:var(--danger)}
+    /* Second press of a delete button, once it is asking for confirmation. */
+    .danger.arming{border-color:var(--danger);color:var(--danger)}
+
+    input[type=file]{
+      position:absolute;width:1px;height:1px;overflow:hidden;
+      clip:rect(0 0 0 0);white-space:nowrap;
     }
-    .qrCard{
-      background:#fff;padding:10px;border-radius:20px;
-      box-shadow:0 12px 35px rgba(0,0,0,.25);
-      line-height:0;
-    }
-    #qrCanvas{
-      display:block;max-width:min(280px,72vw);height:auto;
-      image-rendering:pixelated;
-    }
-    .qrLabel{
-      text-align:center;color:var(--muted);font-size:13px;
-      margin-top:8px;
-    }
+
+    /* -- QR --------------------------------------------------------------- */
+
+    .qrWrap{display:flex;justify-content:center;margin:var(--s5) 0 var(--s3)}
+    /* Stays pure white on purpose: scanners need the quiet zone to be white. */
+    .qrCard{background:#fff;padding:var(--s3);border-radius:var(--r-inset);line-height:0}
+    #qrCanvas{display:block;width:min(260px,64vw);height:auto;image-rendering:pixelated}
+    .qrLabel{text-align:center;color:var(--text-muted);font-size:13px;text-wrap:balance}
+
+    .addressRow{display:grid;gap:var(--s2);margin-top:var(--s4)}
     .address{
-      margin-top:14px;padding:12px 14px;border-radius:14px;
-      border:1px solid var(--line);background:rgba(0,0,0,.18);
-      font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
-      font-size:12px;line-height:1.5;word-break:break-all
+      padding:var(--s3);border-radius:var(--r-inset);
+      border:1px solid var(--border);background:var(--ink);
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:12px;line-height:1.5;word-break:break-all;
+      font-variant-numeric:tabular-nums;
     }
-    .addressRow{display:grid;gap:9px;margin-top:12px}
-    .copyRow{display:flex;gap:8px;margin-top:12px}
-    .copyRow button{flex:1}
-    .hint{
-      margin-top:15px;padding:13px;border-radius:14px;color:var(--muted);
-      background:rgba(112,168,255,.07);border:1px solid rgba(112,168,255,.16);
-      font-size:13px;line-height:1.45
+    .copyRow{display:flex;gap:var(--s2);margin-top:var(--s3)}
+    .copyRow>*{flex:1}
+
+    /* -- progress --------------------------------------------------------- */
+
+    .progressBox{display:none;margin-top:var(--s5)}
+    .progressBox[data-active]{display:block}
+    .bar{height:8px;border-radius:999px;background:var(--surface-muted);overflow:hidden}
+    .bar>div{
+      height:100%;width:0;background:var(--accent);
+      transition:width var(--motion) linear;
     }
-    .progressBox{display:none;margin-top:18px}
-    .bar{height:12px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
-    .bar > div{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent))}
-    .progressMeta{display:flex;justify-content:space-between;gap:12px;margin-top:7px;color:var(--muted);font-size:13px}
-    .status{min-height:20px;margin-top:12px;font-size:14px}
-    .ok{color:var(--accent)}
-    .err{color:#ff9bab}
-    .filesCard{grid-column:1/-1}
-    .filesHead{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}
-    .files{display:grid;gap:10px}
+    .progressMeta{
+      display:flex;justify-content:space-between;gap:var(--s3);
+      margin-top:var(--s2);color:var(--text-muted);font-size:13px;
+    }
+    #progressName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    .status{min-height:20px;margin-top:var(--s3);font-size:14px}
+    .status.ok{color:var(--accent)}
+    .status.err{color:var(--danger)}
+
+    /* -- file list -------------------------------------------------------- */
+
+    .filesHead{
+      display:flex;justify-content:space-between;gap:var(--s3);
+      align-items:flex-start;margin-bottom:var(--s4);
+    }
+    .files{display:grid;gap:var(--s2)}
     .file{
-      display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;
-      padding:14px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.035)
+      display:grid;grid-template-columns:minmax(0,1fr) auto;
+      gap:var(--s3);align-items:center;
+      padding:var(--s3) var(--s4);border:1px solid var(--border);
+      border-radius:var(--r-inset);background:var(--surface-muted);
     }
-    .fileName{font-weight:760;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .meta{margin-top:4px;color:var(--muted);font-size:13px}
-    .actions{display:flex;gap:8px}
-    .empty{text-align:center;color:var(--muted);padding:30px 0}
-    .footer{margin:18px 0 4px;text-align:center;color:var(--muted);font-size:12px}
-    @media(max-width:780px){
-      body{padding:15px}
-      header{flex-direction:column}
+    .fileName{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .meta{margin-top:2px;color:var(--text-muted);font-size:13px}
+    .actions{display:flex;gap:var(--s2)}
+    .empty{text-align:center;color:var(--text-muted);padding:var(--s6) var(--s4);text-wrap:balance}
+
+    /* Skeleton rows match the shape of a real file row, so the list does not
+       jump when the first fetch lands. */
+    .skeleton{height:66px;border-radius:var(--r-inset);background:var(--surface-muted);
+      border:1px solid var(--border);animation:pulse 1.4s ease-in-out infinite}
+    .skeleton:nth-child(2){animation-delay:.15s}
+    .skeleton:nth-child(3){animation-delay:.3s}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+    .footer{
+      margin:var(--s5) 0 var(--s1);text-align:center;
+      color:var(--text-muted);font-size:12px;text-wrap:balance;
+    }
+
+    /* -- narrow screens ---------------------------------------------------- */
+
+    /* One column. On a phone the QR is the least useful card — you are already
+       connected — so it drops below the files list. */
+    @media(max-width:900px){
       .grid{grid-template-columns:1fr}
-      .drop{min-height:220px;padding:20px}
+      .sendCard,.connectCard,.filesCard{grid-column:auto;grid-row:auto}
+    }
+
+    @media(max-width:560px){
+      body{padding-top:var(--s4)}
+      header{flex-direction:column;gap:var(--s3);margin-bottom:var(--s5)}
+      .headEnd{flex-direction:row;align-items:center;justify-content:space-between;width:100%}
+      .installHint{margin-top:calc(var(--s4) * -1)}
+      .brand{gap:var(--s3)}
+      .mark{width:44px;height:44px}
+      .card{padding:var(--s4);border-radius:var(--r-inset)}
+      .drop{min-height:190px;padding:var(--s4)}
+      .arrow{font-size:32px}
+      .filesHead{flex-direction:column}
+      .filesHead>button{width:100%}
+      /* Name over actions, and the actions split the row evenly. */
       .file{grid-template-columns:1fr}
       .actions>*{flex:1}
-      .filesHead{align-items:flex-start}
+    }
+
+    @media(max-width:380px){
+      #qrCanvas{width:min(220px,72vw)}
+      .address{font-size:11px}
+    }
+
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms !important;
+        animation-iteration-count:1 !important;
+        transition-duration:.01ms !important;
+      }
     }
   </style>
 </head>
 <body>
-<main class="wrap">
+<a class="skip" href="#main">Saltar al contenido</a>
+<main class="wrap" id="main">
   <header>
-    <div>
-      <h1>FileFly</h1>
-      <p class="muted">Transfiere archivos entre la PC y el celular. Sin cable, sin nube y sin instalar aplicaciones.</p>
+    <div class="brandCol">
+      <div class="brand">
+        <img class="mark" src="/icon-256.png" alt="" width="56" height="56">
+        <h1>FileFly</h1>
+      </div>
+      <p class="muted lede">Archivos entre la PC y el celular. Sin cable ni apps.</p>
     </div>
-    <div class="badge"><span class="dot"></span>Servidor local activo</div>
+    <div class="headEnd">
+      <p class="badge"><span class="dot" aria-hidden="true"></span>Conectado</p>
+      <button id="installBtn" class="secondary" type="button" hidden>Instalar app</button>
+    </div>
   </header>
+  <p id="installHint" class="installHint" role="status" hidden></p>
 
-  <section class="grid">
-    <article class="card">
-      <h2>Enviar archivos</h2>
-      <p class="muted">Elige uno o varios archivos. Se guardan directamente en la PC.</p>
+  <div class="grid">
+    <section class="card sendCard" aria-labelledby="sendTitle">
+      <h2 id="sendTitle">Enviar a la PC</h2>
 
       <div id="drop" class="drop">
-        <div class="arrow">⇧</div>
+        <span class="arrow" aria-hidden="true">↑</span>
         <strong>Suelta los archivos aquí</strong>
-        <span class="muted" style="margin:8px 0 17px">o selecciónalos manualmente</span>
-        <label for="filesInput" class="button primary">Seleccionar archivos</label>
+        <label for="filesInput" class="button primary">Buscar archivos</label>
         <input id="filesInput" type="file" multiple>
       </div>
 
       <div id="progressBox" class="progressBox">
-        <div class="bar"><div id="progressBar"></div></div>
+        <div class="bar">
+          <div id="progressBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+        </div>
         <div class="progressMeta">
-          <span id="progressName">Preparando...</span>
-          <span id="progressPct">0%</span>
+          <span id="progressName">Preparando</span>
+          <span id="progressPct" class="tnum">0%</span>
         </div>
       </div>
 
-      <div id="status" class="status"></div>
-    </article>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </section>
 
-    <article class="card">
-      <h2>Conectar otro dispositivo</h2>
-      <p class="muted">Ambos dispositivos deben estar conectados al mismo router o red Wi‑Fi.</p>
+    <section class="card filesCard" aria-labelledby="filesTitle">
+      <div class="filesHead">
+        <div>
+          <h2 id="filesTitle">Compartidos</h2>
+          <p class="muted lede">Disponibles en la PC y el celular.</p>
+        </div>
+        <button id="refreshBtn" class="secondary" type="button">Actualizar</button>
+      </div>
+      <div id="files" class="files" aria-busy="true">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </div>
+    </section>
+
+    <section class="card connectCard" aria-labelledby="connectTitle">
+      <h2 id="connectTitle">Conectar otro dispositivo</h2>
+      <p class="muted lede">Ambos en la misma red Wi‑Fi.</p>
 
       <div class="qrWrap">
         <div class="qrCard">
-          <canvas id="qrCanvas" width="280" height="280" aria-label="Código QR de conexión"></canvas>
+          <canvas id="qrCanvas" width="280" height="280" role="img" aria-label="Código QR para conectar otro dispositivo"></canvas>
         </div>
       </div>
-      <div id="qrLabel" class="qrLabel">Generando código QR...</div>
+      <p id="qrLabel" class="qrLabel">Generando el código</p>
 
       <div id="addresses" class="addressRow"></div>
 
       <div class="copyRow">
-        <button class="secondary" id="copyBtn">Copiar enlace</button>
+        <button class="secondary" id="copyBtn" type="button">Copiar enlace</button>
       </div>
 
-      <div class="hint">
-        Escanea el código QR con la cámara del celular. Se abrirá directamente la dirección local
-        con el token de esta sesión. También puedes copiar el enlace manualmente.
-      </div>
-    </article>
+    </section>
+  </div>
 
-    <article class="card filesCard">
-      <div class="filesHead">
-        <div>
-          <h2>Compartidos</h2>
-          <p class="muted">Los archivos de esta lista están disponibles para los dispositivos conectados.</p>
-        </div>
-        <button id="refreshBtn" class="secondary">Actualizar</button>
-      </div>
-      <div id="files" class="files"></div>
-    </article>
-  </section>
-
-  <div class="footer">Los archivos se transfieren por tu red local y quedan guardados en la carpeta “Compartidos”.</div>
+  <p class="footer">Todo viaja por tu red local. Nada sale a internet.</p>
 </main>
 
 <script>
@@ -1517,6 +1676,8 @@ module.exports = QRCode;
     qr: $("#qrCanvas"),
     qrLabel: $("#qrLabel"),
     copy: $("#copyBtn"),
+    install: $("#installBtn"),
+    installHint: $("#installHint"),
     status: $("#status"),
     box: $("#progressBox"),
     bar: $("#progressBar"),
@@ -1543,6 +1704,12 @@ module.exports = QRCode;
     els.status.className = "status " + cls;
   }
 
+  function setProgress(pct){
+    els.bar.style.width = pct + "%";
+    els.bar.setAttribute("aria-valuenow", pct);
+    els.pct.textContent = pct + "%";
+  }
+
   async function loadConfig(){
     const r = await fetch(api("/api/config"));
     if (!r.ok) throw new Error("No autorizado.");
@@ -1558,24 +1725,35 @@ module.exports = QRCode;
     }
 
     if (!shareUrls.length){
-      els.addresses.innerHTML = '<div class="address">No se detectó una IP de red local.</div>';
-      els.qrLabel.textContent = "No se pudo generar el código QR: no se detectó una dirección IP local.";
+      els.addresses.innerHTML = '<div class="address">Sin red local</div>';
+      els.qrLabel.textContent = "Conecta la PC al Wi‑Fi para generar el código.";
+      els.copy.disabled = true;
       return;
     }
 
     try{
       LocalQRCode.draw(els.qr, shareUrls[0], 280);
-      els.qrLabel.textContent = "Escanea para abrir FileFly";
+      els.qrLabel.textContent = "Escanea con la cámara del otro dispositivo";
     }catch(err){
       console.error("QR:", err);
-      els.qrLabel.textContent = "No se pudo generar el código QR. Utiliza el enlace que aparece abajo.";
+      els.qrLabel.textContent = "No se pudo generar el código. Usa el enlace de abajo.";
     }
   }
 
   async function loadFiles(){
-    const r = await fetch(api("/api/files"));
+    let r;
+    try{
+      r = await fetch(api("/api/files"));
+    }catch{
+      els.files.setAttribute("aria-busy", "false");
+      els.files.innerHTML = '<div class="empty">Sin conexión con la PC. Revisa que ambos sigan en la misma red Wi‑Fi.</div>';
+      return;
+    }
+
+    els.files.setAttribute("aria-busy", "false");
+
     if (!r.ok) {
-      els.files.innerHTML = '<div class="empty">No se pudo acceder a la carpeta compartida.</div>';
+      els.files.innerHTML = '<div class="empty">No se pudo abrir la carpeta compartida. Comprueba que FileFly siga abierto en la PC.</div>';
       return;
     }
 
@@ -1583,7 +1761,7 @@ module.exports = QRCode;
     const files = data.files || [];
 
     if (!files.length){
-      els.files.innerHTML = '<div class="empty">Aún no hay archivos compartidos.</div>';
+      els.files.innerHTML = '<div class="empty">Todavía no hay archivos.</div>';
       return;
     }
 
@@ -1598,7 +1776,7 @@ module.exports = QRCode;
       name.textContent = f.name;
 
       const meta = document.createElement("div");
-      meta.className = "meta";
+      meta.className = "meta tnum";
       meta.textContent = formatBytes(f.size);
 
       left.append(name, meta);
@@ -1611,17 +1789,40 @@ module.exports = QRCode;
       dl.textContent = "Descargar";
       dl.href = api("/api/download?name=" + encodeURIComponent(f.name));
 
+      // Two presses instead of confirm(): a modal dialog blocks the page and
+      // reads badly on a phone. The button asks for itself and disarms after
+      // a few seconds if the second press never comes.
       const del = document.createElement("button");
       del.className = "danger";
+      del.type = "button";
       del.textContent = "Eliminar";
+
+      let armed = 0;
+      const disarm = () => {
+        clearTimeout(armed);
+        armed = 0;
+        del.classList.remove("arming");
+        del.textContent = "Eliminar";
+      };
+
       del.onclick = async () => {
-        if (!confirm('¿Eliminar "' + f.name + '"?')) return;
-        const res = await fetch(api("/api/file?name=" + encodeURIComponent(f.name)), {method:"DELETE"});
-        if (res.ok){
-          setStatus("Archivo eliminado.", "ok");
-          loadFiles();
-        } else {
-          setStatus("No se pudo eliminar.", "err");
+        if (!armed){
+          del.classList.add("arming");
+          del.textContent = "Confirmar";
+          armed = setTimeout(disarm, 4000);
+          return;
+        }
+        disarm();
+
+        del.disabled = true;
+        try{
+          const res = await fetch(api("/api/file?name=" + encodeURIComponent(f.name)), {method:"DELETE"});
+          if (!res.ok) throw new Error();
+          setStatus("Se eliminó " + f.name, "ok");
+          await loadFiles();
+        }catch{
+          del.disabled = false;
+          setStatus("No se pudo eliminar " + f.name, "err");
         }
       };
 
@@ -1638,29 +1839,25 @@ module.exports = QRCode;
       xhr.setRequestHeader("X-Filename", encodeURIComponent(file.name));
       xhr.setRequestHeader("Content-Type", "application/octet-stream");
 
-      els.box.style.display = "block";
+      els.box.dataset.active = "";
       els.name.textContent = total > 1 ? `${index + 1}/${total} · ${file.name}` : file.name;
-      els.bar.style.width = "0%";
-      els.pct.textContent = "0%";
+      setProgress(0);
 
       xhr.upload.onprogress = e => {
         if (!e.lengthComputable) return;
-        const pct = Math.round(e.loaded / e.total * 100);
-        els.bar.style.width = pct + "%";
-        els.pct.textContent = pct + "%";
+        setProgress(Math.round(e.loaded / e.total * 100));
       };
 
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300){
-          els.bar.style.width = "100%";
-          els.pct.textContent = "100%";
+          setProgress(100);
           resolve();
         } else {
-          reject(new Error("Falló la transferencia de " + file.name));
+          reject(new Error("No se pudo enviar " + file.name));
         }
       };
 
-      xhr.onerror = () => reject(new Error("Error de red."));
+      xhr.onerror = () => reject(new Error("Sin conexión con la PC. Revisa el Wi‑Fi."));
       xhr.send(file);
     });
   }
@@ -1674,11 +1871,11 @@ module.exports = QRCode;
       for (let i=0;i<files.length;i++){
         await uploadOne(files[i], i, files.length);
       }
-      setStatus(files.length === 1 ? "Transferencia completada." : "Transferencias completadas.", "ok");
+      setStatus(files.length === 1 ? "Archivo enviado" : files.length + " archivos enviados", "ok");
       els.input.value = "";
       await loadFiles();
     }catch(err){
-      setStatus(err.message || "La transferencia no pudo completarse.", "err");
+      setStatus(err.message || "El envío no pudo completarse.", "err");
     }
   }
 
@@ -1707,15 +1904,80 @@ module.exports = QRCode;
     try{
       await navigator.clipboard.writeText(url);
       els.copy.textContent = "Enlace copiado";
-      setTimeout(() => els.copy.textContent = "Copiar enlace", 1200);
+      setTimeout(() => els.copy.textContent = "Copiar enlace", 1600);
     }catch{
-      prompt("Copia este enlace:", url);
+      // The clipboard API needs a secure context, and this page is plain HTTP
+      // over the LAN. Select the address so a long press can copy it by hand.
+      const first = els.addresses.firstElementChild;
+      if (first){
+        const range = document.createRange();
+        range.selectNodeContents(first);
+        const sel = getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      setStatus("Enlace seleccionado: mantén pulsado para copiarlo.", "err");
     }
   });
 
-  Promise.all([loadConfig(), loadFiles()]).catch(err => {
-    console.error(err);
-    setStatus("No se pudo iniciar la interfaz correctamente.", "err");
+  // -- install ---------------------------------------------------------------
+  //
+  // Chrome only fires beforeinstallprompt for a page with a service worker, and
+  // a service worker needs a secure context — which http://<lan-ip> is not. So
+  // the one-tap install is a bonus, and the fallback is the manual "add to home
+  // screen" route, which does honour the manifest and gives the same icon and
+  // standalone window.
+  {
+    const installed = matchMedia("(display-mode: standalone)").matches ||
+      navigator.standalone === true;
+
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+    const manualHint = isIOS
+      ? "En Safari: toca Compartir y luego «Agregar a inicio»."
+      : "En el menú del navegador (⋮) elige «Instalar app» o «Agregar a pantalla de inicio».";
+
+    let deferred = null;
+    els.install.hidden = installed;
+
+    addEventListener("beforeinstallprompt", e => {
+      e.preventDefault();
+      deferred = e;
+      els.install.hidden = false;
+      els.installHint.hidden = true;
+    });
+
+    addEventListener("appinstalled", () => {
+      deferred = null;
+      els.install.hidden = true;
+      els.installHint.hidden = true;
+    });
+
+    els.install.addEventListener("click", async () => {
+      if (!deferred){
+        els.installHint.textContent = manualHint;
+        els.installHint.hidden = false;
+        return;
+      }
+      const prompted = deferred;
+      deferred = null;
+      prompted.prompt();
+      const choice = await prompted.userChoice;
+      if (choice.outcome === "accepted") els.install.hidden = true;
+    });
+  }
+
+  loadConfig().catch(err => {
+    console.error("config:", err);
+    els.qrLabel.textContent = "Sesión no válida. Vuelve a escanear el código desde la PC.";
+    els.copy.disabled = true;
+  });
+
+  loadFiles().catch(err => {
+    console.error("files:", err);
+    els.files.setAttribute("aria-busy", "false");
+    els.files.innerHTML = '<div class="empty">No se pudo leer la lista. Toca Actualizar.</div>';
   });
 })();
 </script>

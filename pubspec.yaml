@@ -63,6 +63,29 @@ flutter:
 
   assets:
     - assets/web/index.html
+    # 128 is the mark in the window header; 256 and 512 are handed to phones
+    # so "add to home screen" gets the real logo instead of a screenshot.
+    - assets/icons/filefly-128.png
+    - assets/icons/filefly-256.png
+    - assets/icons/filefly-512.png
+
+  # Bundled so the window looks identical on every machine, and so nothing has
+  # to be fetched at runtime — this app never talks to the internet.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Inter-ExtraBold.ttf
+          weight: 800
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+          weight: 400
 
   # To add assets to your application, add an assets section, like this:
   # assets:
