@@ -158,12 +158,6 @@ class FileServer {
     }
 
     switch ((request.method, path)) {
-      case ('GET', '/api/config'):
-        await _sendJson(request, {
-          'port': _server?.port,
-          'urls': _shareUrls,
-          'hostname': Platform.localHostname,
-        });
       case ('GET', '/api/files'):
         await _sendJson(request, {
           'files': [

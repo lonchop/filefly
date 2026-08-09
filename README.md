@@ -52,8 +52,8 @@ flutter build windows --release   # must be run on Windows
 ├─────────────────────────────────────────────┤
 │ FileServer — dart:io HttpServer on :8765    │
 │   /            token -> cookie -> page      │
-│   /api/config  /api/files                   │
-│   /api/upload  /api/download  /api/file     │
+│   /api/files   /api/upload                  │
+│   /api/download  /api/file                  │
 ├─────────────────────────────────────────────┤
 │ Shared folder (~/FileFly by default)        │
 └─────────────────────────────────────────────┘
