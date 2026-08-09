@@ -158,6 +158,23 @@ void main() {
     expect(response.statusCode, HttpStatus.notFound);
   });
 
+  // El interruptor de la insignia de estado apaga y enciende el servidor sin
+  // reconstruirlo. Si volver a levantarlo no funcionara, el usuario quedaría
+  // obligado a reiniciar la app entera para recuperar la conexión.
+  test('stop and start again with the same token', () async {
+    await server.stop();
+    expect(server.isRunning, isFalse);
+    expect(server.shareUrls, isEmpty);
+
+    await server.start(port: 0);
+    base = 'http://127.0.0.1:${server.port}';
+    final response = await send('GET', '/api/files?token=$_token');
+
+    expect(server.isRunning, isTrue);
+    expect(response.statusCode, HttpStatus.ok);
+    await response.drain<void>();
+  });
+
   test('safeFileName strips every path component', () {
     expect(safeFileName('../../etc/passwd'), 'passwd');
     expect(safeFileName(r'C:\Windows\system32\evil.dll'), 'evil.dll');

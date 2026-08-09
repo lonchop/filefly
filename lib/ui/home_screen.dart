@@ -64,6 +64,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Corta o levanta el servidor desde la insignia de estado.
+  ///
+  /// El token no rota al reiniciar, así que el QR impreso y los celulares ya
+  /// emparejados siguen valiendo cuando se vuelve a conectar. Por eso esto no
+  /// pide confirmación: es reversible con el mismo clic.
+  Future<void> _toggleServer() async {
+    final server = _server;
+    if (server == null) return;
+    if (server.isRunning) {
+      await server.stop();
+    } else {
+      await server.start(port: _defaultPort);
+    }
+    if (mounted) setState(() {});
+  }
+
   Future<void> _refresh() async {
     final files = await _server?.listFiles() ?? const <SharedFile>[];
     if (mounted) setState(() => _files = files);
@@ -198,7 +214,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           _Header(
                             narrow: narrow,
                             running: server?.isRunning ?? false,
-                            onConnect: server == null ? null : _showConnect,
+                            onConnect: server == null || !server.isRunning ? null : _showConnect,
+                            onToggle: server == null ? null : _toggleServer,
                           ),
                           SizedBox(height: narrow ? Space.lg : Space.xl),
                           Expanded(
@@ -239,11 +256,17 @@ class _HomeScreenState extends State<HomeScreen> {
 /// Marca, estado del servidor y la puerta al emparejamiento. Una sola fila:
 /// todo lo que no sea la carpeta compartida cabe aquí.
 class _Header extends StatelessWidget {
-  const _Header({required this.narrow, required this.running, required this.onConnect});
+  const _Header({
+    required this.narrow,
+    required this.running,
+    required this.onConnect,
+    required this.onToggle,
+  });
 
   final bool narrow;
   final bool running;
   final VoidCallback? onConnect;
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -295,7 +318,7 @@ class _Header extends StatelessWidget {
       children: [
         brand,
         const Spacer(),
-        _StatusBadge(running: running),
+        _StatusBadge(running: running, onToggle: onToggle),
         const SizedBox(width: Space.sm),
         connect,
       ],
@@ -303,39 +326,55 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// La insignia de estado es además el interruptor del servidor.
+///
+/// El control que dice si algo está encendido es el sitio natural para
+/// apagarlo, y así el encabezado no gana un tercer botón al lado del de
+/// emparejar. La etiqueta ya nombra el estado; el tooltip nombra la acción.
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.running});
+  const _StatusBadge({required this.running, required this.onToggle});
 
   final bool running;
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: Space.lg, vertical: Space.md - 2),
-      decoration: BoxDecoration(
+    return Tooltip(
+      message: running ? 'Cortar la conexión' : 'Volver a conectar',
+      child: Material(
         color: AppColors.surface,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Punto plano. La etiqueta que tiene al lado es la que enuncia el
-          // estado; el punto no necesita un halo para decirlo dos veces.
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: running ? AppColors.accent : AppColors.danger,
-              shape: BoxShape.circle,
+        shape: const StadiumBorder(side: BorderSide(color: AppColors.border)),
+        child: InkWell(
+          onTap: onToggle,
+          customBorder: const StadiumBorder(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Space.lg, vertical: Space.md - 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Punto plano. La etiqueta que tiene al lado es la que enuncia
+                // el estado; el punto no necesita un halo para decirlo dos
+                // veces.
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: running ? AppColors.accent : AppColors.danger,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: Space.sm + 2),
+                // Las mismas dos etiquetas que la página del celular. Que cada
+                // superficie llamara al mismo estado de forma distinta obligaba
+                // a traducir entre pantalla y pantalla.
+                Text(
+                  running ? 'Conectado' : 'Sin conexión',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: Space.sm + 2),
-          // Las mismas dos etiquetas que la página del celular. Que cada
-          // superficie llamara al mismo estado de forma distinta obligaba a
-          // traducir entre pantalla y pantalla.
-          Text(running ? 'Conectado' : 'Sin conexión', style: const TextStyle(fontSize: 13)),
-        ],
+        ),
       ),
     );
   }
