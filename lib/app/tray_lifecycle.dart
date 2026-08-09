@@ -22,6 +22,9 @@ class TrayLifecycle with WindowListener, TrayListener {
       // verdad. Se avisa por stderr: un catch mudo aquí esconde justo el
       // fallo que deja la app sin forma de volver.
       stderr.writeln('FileFly: no se pudo registrar la bandeja: $err');
+      // El arranque de sesión entra con --hidden y la ventana solo vuelve por
+      // la bandeja: sin ella hay que mostrarla o queda un proceso invisible.
+      await windowManager.show();
       return;
     }
     trayManager.addListener(this);

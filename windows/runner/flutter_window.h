@@ -12,7 +12,9 @@
 class FlutterWindow : public Win32Window {
  public:
   // Creates a new FlutterWindow hosting a Flutter view running |project|.
-  explicit FlutterWindow(const flutter::DartProject& project);
+  // Con |starts_hidden| la ventana no se muestra en el primer frame y FileFly
+  // queda solo en la bandeja.
+  FlutterWindow(const flutter::DartProject& project, bool starts_hidden);
   virtual ~FlutterWindow();
 
  protected:
@@ -25,6 +27,9 @@ class FlutterWindow : public Win32Window {
  private:
   // The project to run.
   flutter::DartProject project_;
+
+  // Si el arranque pidió quedarse solo en la bandeja.
+  bool starts_hidden_;
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;

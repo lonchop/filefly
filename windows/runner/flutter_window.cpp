@@ -4,8 +4,9 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
-FlutterWindow::FlutterWindow(const flutter::DartProject& project)
-    : project_(project) {}
+FlutterWindow::FlutterWindow(const flutter::DartProject& project,
+                             bool starts_hidden)
+    : project_(project), starts_hidden_(starts_hidden) {}
 
 FlutterWindow::~FlutterWindow() {}
 
@@ -28,6 +29,11 @@ bool FlutterWindow::OnCreate() {
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
+    // El arranque de sesión entra con --hidden. Esconder la ventana desde Dart
+    // llegaría tarde: para entonces ya se vio el parpadeo.
+    if (starts_hidden_) {
+      return;
+    }
     this->Show();
   });
 
