@@ -10,6 +10,7 @@ PREFIX="${XDG_DATA_HOME:-$HOME/.local/share}"
 APP_DIR="$PREFIX/filefly"
 BIN_DIR="$HOME/.local/bin"
 DESKTOP_FILE="$PREFIX/applications/filefly.desktop"
+AUTOSTART_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/autostart/filefly.desktop"
 
 if [[ ! -x "$BUNDLE/filefly" ]]; then
   echo "No hay build release. Corre primero:" >&2
@@ -47,6 +48,22 @@ StartupNotify=true
 StartupWMClass=dev.jose.FileFly
 DESKTOP
 chmod +x "$DESKTOP_FILE"
+
+echo "==> Arranque con la sesion"
+mkdir -p "$(dirname "$AUTOSTART_FILE")"
+cat > "$AUTOSTART_FILE" <<AUTOSTART
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=FileFly
+Comment=Mantiene FileFly en la bandeja para que el celular siempre lo encuentre
+Exec=$APP_DIR/filefly --hidden
+Icon=filefly
+Terminal=false
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
+AUTOSTART
+chmod +x "$AUTOSTART_FILE"
 
 echo "==> Enlace en $BIN_DIR"
 mkdir -p "$BIN_DIR"
