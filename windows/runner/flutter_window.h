@@ -8,6 +8,12 @@
 
 #include "win32_window.h"
 
+// Mensaje que un segundo arranque difunde para que la instancia que ya corre
+// saque su ventana. RegisterWindowMessage traduce este nombre al mismo id en
+// los dos procesos y garantiza que no choque con ningún WM_ del sistema.
+inline constexpr wchar_t kShowExistingWindowMessage[] =
+    L"FileFly.ShowExistingWindow";
+
 // A window that does nothing but host a Flutter view.
 class FlutterWindow : public Win32Window {
  public:

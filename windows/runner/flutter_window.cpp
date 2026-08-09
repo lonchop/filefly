@@ -57,6 +57,17 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // Un segundo arranque difunde este mensaje en vez de abrir una ventana que no
+  // podría levantar el servidor. Se atiende antes que Flutter porque no es un
+  // mensaje de interfaz.
+  static const UINT show_existing_window =
+      ::RegisterWindowMessageW(kShowExistingWindowMessage);
+  if (message == show_existing_window) {
+    Show();
+    ::SetForegroundWindow(hwnd);
+    return 0;
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =
