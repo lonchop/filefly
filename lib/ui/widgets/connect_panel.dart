@@ -16,34 +16,40 @@ class ConnectPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionTitle(
-            'Conectar otro dispositivo',
-            'Ambos dispositivos deben estar conectados al mismo router o red Wi-Fi.',
-          ),
-          const SizedBox(height: 20),
+          const SectionTitle('Conectar el celular', subtitle: 'Ambos en la misma red Wi-Fi.'),
+          const SizedBox(height: Space.xl - 4),
           if (shareUrls.isEmpty)
             const _NoNetwork()
           else ...[
             Center(
               child: Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(Space.md),
                 decoration: BoxDecoration(
+                  // Stays pure white on purpose: a scanner needs the quiet
+                  // zone around the code to be white.
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(Radii.inset),
                 ),
-                child: QrImageView(
-                  data: shareUrls.first,
-                  size: 220,
-                  backgroundColor: Colors.white,
-                  // A URL with a 32-char token needs the density; low
-                  // correction keeps the modules big enough to scan.
-                  errorCorrectionLevel: QrErrorCorrectLevel.L,
+                // The tight box is load-bearing: QrImageView measures itself
+                // with a LayoutBuilder, and the row above asks this card for
+                // its intrinsic height. A tight height answers that without
+                // reaching into the builder, which cannot report one.
+                child: SizedBox.square(
+                  dimension: 220,
+                  child: QrImageView(
+                    data: shareUrls.first,
+                    size: 220,
+                    backgroundColor: Colors.white,
+                    // A URL with a 32-char token needs the density; low
+                    // correction keeps the modules big enough to scan.
+                    errorCorrectionLevel: QrErrorCorrectLevel.L,
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 12),
             const Center(
-              child: Text('Escanea para abrir FileFly',
+              child: Text('Escanea con la cámara del celular',
                   style: TextStyle(color: AppColors.textMuted)),
             ),
             const SizedBox(height: 20),
@@ -63,7 +69,7 @@ class ConnectPanel extends StatelessWidget {
   void _copy(BuildContext context, String url) {
     Clipboard.setData(ClipboardData(text: url));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Enlace copiado.')),
+      const SnackBar(content: Text('Enlace copiado')),
     );
   }
 }
@@ -75,17 +81,20 @@ class _UrlBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Fill, no border. This is a value to read and copy, not a control, and
+    // giving it the same edge as the card around it was one more rectangle
+    // saying nothing.
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      margin: const EdgeInsets.only(bottom: Space.sm),
+      padding: const EdgeInsets.symmetric(horizontal: Space.md, vertical: Space.md),
       decoration: BoxDecoration(
         color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(Radii.inset),
       ),
       child: SelectableText(
         url,
-        style: const TextStyle(fontFamily: 'monospace', fontSize: 12, height: 1.5),
+        style: kMonoStyle,
       ),
     );
   }
@@ -104,8 +113,7 @@ class _NoNetwork extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: const Text(
-        'No se detecto una direccion de red local. Conecta esta PC al Wi-Fi '
-        'o a la red del router para poder generar el codigo QR.',
+        'Esta PC no está en una red local. Conéctala al Wi-Fi y reinicia FileFly.',
         style: TextStyle(color: AppColors.textMuted, height: 1.5),
       ),
     );
